@@ -178,7 +178,7 @@
                         <span>أدمن مسجل: {{ currentUser.email }}</span>
                     </span>
                     <span>
-                                                                    <!-- Toggle Admin Modal or Login Button -->
+                        <!-- Toggle Admin Modal or Login Button -->
                         <div class="flex items-center gap-2">
                             <button v-if="!isAdminMode" 
                                     @click="showLoginModal = true" 
@@ -262,37 +262,52 @@
         <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
             
             <!-- HERO SEARCH & ANNOUNCEMENT BANNER -->
-            <section class="mb-6 no-print">
-                <div class="bg-gradient-to-r from-hospital-navy via-slate-800 to-medical-900 rounded-3xl p-6 md:p-8 text-white shadow-xl relative overflow-hidden">
-                    <div class="absolute -left-10 -bottom-10 w-48 h-48 bg-teal-500/10 rounded-full blur-2xl"></div>
-                    <div class="relative z-10 max-w-3xl">
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-teal-500/20 text-teal-300 border border-teal-500/30 mb-3">
-                            <i class="fa-solid fa-cloud-arrow-down"></i> مزامنة فورية - مستشفى مبرة العصافرة Capital
-                        </span>
-                        
-                        <h2 class="text-2xl md:text-3xl font-extrabold mb-2 leading-snug">ابحث عن الطبيب المناوب حسب أولوية الاستدعاء اليومية</h2>
-                        <p class="text-slate-300 text-sm md:text-base mb-6 leading-relaxed">
-                            اختر اليوم والتخصص المطلوب لعرض الكادر المناوب مرتبين بحسب أولوية الاستدعاء اليومية المحددة.
-                        </p>
+<section class="mb-6 no-print">
+    <div class="bg-gradient-to-r from-hospital-navy via-slate-800 to-medical-900 rounded-3xl p-6 md:p-8 text-white shadow-xl relative overflow-hidden">
+        <!-- الخلفية الجمالية الباهتة -->
+        <div class="absolute -left-10 -bottom-10 w-48 h-48 bg-teal-500/10 rounded-full blur-2xl"></div>
+        
+        <!-- الحاوية الرئيسية باستخدام Flexbox لتوزيع المحتوى والصورة -->
+        <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+            
+            <!-- الجزء الأيمن: النصوص ومدخل البحث -->
+            <div class="w-full md:max-w-xl lg:max-w-2xl">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-teal-500/20 text-teal-300 border border-teal-500/30 mb-3">
+                    <i class="fa-solid fa-cloud-arrow-down"></i> مزامنة فورية - مستشفى مبرة العصافرة Capital
+                </span>
+                
+                <h2 class="text-2xl md:text-3xl font-extrabold mb-2 leading-snug">ابحث عن الطبيب المناوب حسب أولوية الاستدعاء اليومية</h2>
+                <p class="text-slate-300 text-sm md:text-base mb-6 leading-relaxed">
+                    اختر اليوم والتخصص المطلوب لعرض الأطباء المناوبين مرتبين بحسب أولوية الاستدعاء اليومية المحددة.
+                </p>
 
-                        <!-- Search Box Input -->
-                        <div class="relative">
-                            <div class="absolute inset-y-0 right-0 pl-3 pr-4 flex items-center pointer-events-none text-slate-400">
-                                <i class="fa-solid fa-magnifying-glass text-lg"></i>
-                            </div>
-                            <input type="text" 
-                                   v-model="searchQuery" 
-                                   placeholder="ابحث باسم الطبيب، التخصص، أو رقم الموبايل..." 
-                                   class="w-full pr-12 pl-12 py-3.5 bg-white text-slate-900 rounded-2xl border-0 shadow-lg text-sm sm:text-base focus:ring-4 focus:ring-teal-400 focus:outline-none placeholder:text-slate-400">
-                            <button v-if="searchQuery" 
-                                    @click="searchQuery = ''" 
-                                    class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400 hover:text-slate-600">
-                                <i class="fa-solid fa-xmark text-lg"></i>
-                            </button>
-                        </div>
+                <!-- Search Box Input -->
+                <div class="relative">
+                    <div class="absolute inset-y-0 right-0 pl-3 pr-4 flex items-center pointer-events-none text-slate-400">
+                        <i class="fa-solid fa-magnifying-glass text-lg"></i>
                     </div>
+                    <input type="text" 
+                           v-model="searchQuery" 
+                           placeholder="ابحث باسم الطبيب، التخصص، أو رقم الموبايل..." 
+                           class="w-full pr-12 pl-12 py-3.5 bg-white text-slate-900 rounded-2xl border-0 shadow-lg text-sm sm:text-base focus:ring-4 focus:ring-teal-400 focus:outline-none placeholder:text-slate-400">
+                    <button v-if="searchQuery" 
+                            @click="searchQuery = ''" 
+                            class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400 hover:text-slate-600">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
                 </div>
-            </section>
+            </div>
+
+            <!-- الجزء الأيسر: الصورة -->
+<div class="w-full md:w-auto flex justify-center md:justify-end">
+    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRNY_7EKxmFFecS1pRn4XAeEzNNJIOVUrx-kGU0pFrTdw&s" 
+         alt="صورة الطبيب أو الشعار" 
+         class="w-full max-w-[280px] md:max-w-[340px] object-cover rounded-3xl shadow-2xl border border-white/10">
+</div>
+
+        </div>
+    </div>
+</section>
 
             <!-- WEEKDAY SELECTOR (Saturday = 0 ... Friday = 6) -->
             <section class="mb-8 no-print">
@@ -1425,7 +1440,7 @@
                                 name: 'د. أحمد المنصوري',
                                 specialty: 'الطوارئ والحوادث',
                                 title: 'استشاري طوارئ وحوادث',
-                                phone: '0501234567',
+                                phone: '01234567890',
                                 shiftHours: '08:00 AM - 07:59 AM',
                                 location: 'قسم الطوارئ - الدور الأرضي',
                                 days: [0, 1, 2, 3, 4, 5, 6],
@@ -1436,7 +1451,7 @@
                                 name: 'د. سارة العتيبي',
                                 specialty: 'الطوارئ والحوادث',
                                 title: 'أخصائية طوارئ وعناية',
-                                phone: '0502345678',
+                                phone: '01234567890',
                                 shiftHours: '08:00 AM - 07:59 AM',
                                 location: 'قسم الطوارئ - الدور الأرضي',
                                 days: [0, 5, 6],
@@ -1447,7 +1462,7 @@
                                 name: 'د. خالد الغامدي',
                                 specialty: 'جراحة العظام',
                                 title: 'استشاري جراحة العظام والمفاصل',
-                                phone: '0503456789',
+                                phone: '01234567890',
                                 shiftHours: '08:00 AM - 07:59 AM',
                                 location: 'عيادات العظام - العيادات الخارجية',
                                 days: [1, 3, 5],
@@ -1458,7 +1473,7 @@
                                 name: 'د. فاطمة الزهراني',
                                 specialty: 'الأطفال وحديثي الولادة',
                                 title: 'استشاري طب الأطفال',
-                                phone: '0504567890',
+                                phone: '01234567890',
                                 shiftHours: '08:00 AM - 07:59 AM',
                                 location: 'جناح الأطفال - الدور الثاني',
                                 days: [0, 1, 3, 6],
@@ -1469,7 +1484,7 @@
                                 name: 'د. عمر الشمري',
                                 specialty: 'أمراض القلب',
                                 title: 'أخصائي أمراض قلب وقسطرة',
-                                phone: '0505678901',
+                                phone: '01234567890',
                                 shiftHours: '08:00 AM - 07:59 AM',
                                 location: 'مركز القلب - البرج B',
                                 days: [2, 4, 5, 6],
@@ -1480,7 +1495,7 @@
                                 name: 'د. مريم الحارثي',
                                 specialty: 'النساء والتوليد',
                                 title: 'استشاري أمراض النساء والتوليد',
-                                phone: '0506789012',
+                                phone: '01234567890',
                                 shiftHours: '08:00 AM - 07:59 AM',
                                 location: 'مستشفى الولادة - الدور الأول',
                                 days: [0, 3, 5],
