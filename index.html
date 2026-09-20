@@ -177,7 +177,31 @@
                         <i class="fa-solid fa-user-check text-emerald-400"></i>
                         <span>أدمن مسجل: {{ currentUser.email }}</span>
                     </span>
+                    <span>
+                                                                    <!-- Toggle Admin Modal or Login Button -->
+                        <div class="flex items-center gap-2">
+                            <button v-if="!isAdminMode" 
+                                    @click="showLoginModal = true" 
+                                    class="bg-slate-900 hover:bg-slate-800 text-white shadow-md shadow-slate-900/20 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition flex items-center gap-2">
+                                <i class="fa-solid fa-right-to-bracket text-amber-400"></i>
+                                <span>دخول الأدمن للتعديل</span>
+                            </button>
 
+                            <template v-else>
+                                <button @click="openAdminModal" 
+                                        class="bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-md shadow-amber-500/20 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition flex items-center gap-2">
+                                    <i class="fa-solid fa-sliders"></i>
+                                    <span>لوحة التحكم</span>
+                                </button>
+                                
+                                <button @click="logoutAdmin" 
+                                        title="تسجيل الخروج"
+                                        class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 p-2.5 rounded-2xl text-xs font-bold transition">
+                                    <i class="fa-solid fa-right-from-bracket"></i>
+                                </button>
+                            </template>
+                        </div>
+                    </span>
                     <!-- Firebase Connection Indicator -->
                     <span :class="isFirebaseConnected ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'"
                           class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border">
@@ -245,29 +269,6 @@
                         <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-teal-500/20 text-teal-300 border border-teal-500/30 mb-3">
                             <i class="fa-solid fa-cloud-arrow-down"></i> مزامنة فورية - مستشفى مبرة العصافرة Capital
                         </span>
-                                                <!-- Toggle Admin Modal or Login Button -->
-                        <div class="flex items-center gap-2">
-                            <button v-if="!isAdminMode" 
-                                    @click="showLoginModal = true" 
-                                    class="bg-slate-900 hover:bg-slate-800 text-white shadow-md shadow-slate-900/20 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition flex items-center gap-2">
-                                <i class="fa-solid fa-right-to-bracket text-amber-400"></i>
-                                <span>دخول الأدمن للتعديل</span>
-                            </button>
-
-                            <template v-else>
-                                <button @click="openAdminModal" 
-                                        class="bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-md shadow-amber-500/20 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition flex items-center gap-2">
-                                    <i class="fa-solid fa-sliders"></i>
-                                    <span>لوحة التحكم</span>
-                                </button>
-                                
-                                <button @click="logoutAdmin" 
-                                        title="تسجيل الخروج"
-                                        class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 p-2.5 rounded-2xl text-xs font-bold transition">
-                                    <i class="fa-solid fa-right-from-bracket"></i>
-                                </button>
-                            </template>
-                        </div>
                         
                         <h2 class="text-2xl md:text-3xl font-extrabold mb-2 leading-snug">ابحث عن الطبيب المناوب حسب أولوية الاستدعاء اليومية</h2>
                         <p class="text-slate-300 text-sm md:text-base mb-6 leading-relaxed">
