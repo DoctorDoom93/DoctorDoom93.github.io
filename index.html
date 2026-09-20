@@ -177,10 +177,6 @@
                         <i class="fa-solid fa-user-check text-emerald-400"></i>
                         <span>أدمن مسجل: {{ currentUser.email }}</span>
                     </span>
-                    <span v-else class="bg-slate-800 text-slate-400 border border-slate-700 px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1.5">
-                        <i class="fa-solid fa-eye text-slate-400"></i>
-                        <span>وضع المشاهدة فقط (زائر)</span>
-                    </span>
 
                     <!-- Firebase Connection Indicator -->
                     <span :class="isFirebaseConnected ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'"
