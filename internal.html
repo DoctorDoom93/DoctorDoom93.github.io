@@ -925,17 +925,55 @@ createApp({
       this.authForm = { username: '', password: '' };
     },
     async registerUser() {
-      this.loadingAction = true;
-      this.adminMsg = '';
-      try {
-        await db.collection('users').add(this.newUser);
-        this.adminMsg = 'تم تسجيل المستخدم بنجاح وتوزيع الصلاحية.';
-        this.newUser = { name: '', username: '', password: '', role: 'duty_manager' };
-      } catch (err) {
-        this.adminMsg = 'حدث خطأ أثناء تسجيل المستخدم.';
-      }
+  this.loadingAction = true;
+  this.adminMsg = '';
+  try {
+    // 1. تنظيف البيانات والتحقق من الحقول
+    const username = this.newUser.username ? this.newUser.username.trim() : '';
+    const name = this.newUser.name ? this.newUser.name.trim() : '';
+    const password = this.newUser.password || '';
+    const role = this.newUser.role || 'duty_manager';
+
+    if (!username || !name || !password) {
+      this.adminMsg = 'يرجى إدخال جميع البيانات المطلوبة.';
       this.loadingAction = false;
-    },
+      return;
+    }
+
+    // 2. التحقق من عدم تكرار اسم المستخدم في قاعدة البيانات
+    const checkSnapshot = await db.collection('users')
+      .where('username', '==', username)
+      .get();
+
+    if (!checkSnapshot.empty) {
+      this.adminMsg = 'اسم المستخدم هذا مكرر وموجود بالفعل، اختر اسماً آخر.';
+      this.loadingAction = false;
+      return;
+    }
+
+    // 3. إضافة المستخدم كـ Plain Object لتجنب مشاكل كائنات Vue التفاعلية
+    await db.collection('users').add({
+      name: name,
+      username: username,
+      password: password,
+      role: role,
+      createdAt: Date.now()
+    });
+
+    this.adminMsg = 'تم تسجيل المستخدم بنجاح وتوزيع الصلاحية.';
+    this.newUser = { name: '', username: '', password: '', role: 'duty_manager' };
+  } catch (err) {
+    console.error('خطأ Firebase أثناء تسجيل المستخدم:', err);
+    
+    // تشخيص الخطأ بالتفصيل معرفة سببه
+    if (err.code === 'permission-denied') {
+      this.adminMsg = 'تم رفض الطلب: تم منع الإضافة بواسطة قواعد أمان Firestore (Rules).';
+    } else {
+      this.adminMsg = 'حدث خطأ: ' + (err.message || 'فشلت عملية التسجيل.');
+    }
+  }
+  this.loadingAction = false;
+},
     fetchRequests() {
       this.loadingData = true;
       this.unsubscribe = db.collection('requests').orderBy('timestamp', 'desc').onSnapshot(snapshot => {
