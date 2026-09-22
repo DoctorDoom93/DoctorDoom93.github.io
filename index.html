@@ -172,28 +172,19 @@
 
                 <!-- Database Connection Status & User Authentication Info -->
                 <div class="flex items-center gap-3 text-xs">
-                    <!-- Auth State Badge -->
-                    <span v-if="isAdminMode" class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1.5">
-                        <i class="fa-solid fa-user-check text-emerald-400"></i>
-                        <span>أدمن مسجل: {{ currentUser.email }}</span>
-                    </span>
-                    <span v-else class="bg-slate-800 text-slate-400 border border-slate-700 px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1.5">
-                        <i class="fa-solid fa-eye text-slate-400"></i>
-                        <span>وضع المشاهدة فقط (زائر)</span>
-                    </span>
 
-                    <button @click="openAdminModal" 
-                                :class="isAdminMode ? 'bg-amber-500 text-slate-950 shadow-amber-500/20' : 'bg-slate-900 hover:bg-slate-800 text-white shadow-slate-900/20'"
-                                class="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition shadow-md">
-                            <i :class="isAdminMode ? 'fa-solid fa-lock-open' : 'fa-solid fa-user-gear'"></i>
-                            <span>{{ isAdminMode ? 'لوحة التحكم (نشط)' : 'إدارة المناوبات' }}</span>
-                        </button>
-                        
+                
+ 
+                    <!-- <span v-else class="bg-slate-800 text-slate-400 border border-slate-700 px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1.5">
+                        <i class="fa-solid fa-eye text-slate-400"></i>
+                        <span>وضع المشاهدة</span>
+                    </span> -->
+
                     <!-- Firebase Connection Indicator -->
                     <span :class="isFirebaseConnected ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'"
                           class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border">
                         <i :class="isFirebaseConnected ? 'fa-solid fa-cloud text-emerald-400' : 'fa-solid fa-spinner fa-spin text-amber-400'"></i>
-                        <span>Firebase: {{ isFirebaseConnected ? 'متصل' : 'جاري الاتصال...' }}</span>
+                        <span>{{ isFirebaseConnected ? 'متصل' : 'جاري الاتصال...' }}</span>
                     </span>
 
                     <!-- Seed Data Button (Only for Admin if DB empty) -->
@@ -232,20 +223,45 @@
 
                     <!-- Quick Stats & Admin Authentication Control -->
                     <div class="flex items-center gap-3">
+                        
                         <div class="hidden sm:flex items-center gap-4 bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2 text-xs font-medium">
                             <div class="text-center border-l border-slate-200 pl-3">
                                 <span class="block text-slate-400">إجمالي الأطباء</span>
                                 <span class="font-bold text-slate-800 text-sm">{{ doctors.length }}</span>
                             </div>
-                            <div class="text-center">
+                            <div class="text-center border-l border-slate-200 pl-3">
                                 <span class="block text-slate-400">مناوبون اليوم</span>
                                 <span class="font-bold text-emerald-600 text-sm">{{ todaysOnCallCount }}</span>
                             </div>
+                            <button @click="openAdminModal" 
+                                :class="isAdminMode ? 'bg-amber-500 text-slate-950 shadow-amber-500/20' : 'bg-slate-900 hover:bg-slate-800 text-white shadow-slate-900/20'"
+                                class="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition shadow-md">
+                                <i :class="isAdminMode ? 'fa-solid fa-lock-open' : 'fa-solid fa-user-gear'"></i>
+                                <span>{{ isAdminMode ? 'لوحة التحكم (نشط)' : 'إدارة المناوبات' }}</span>
+                            </button>
+                            <!-- Auth State Badge -->
+                            <span v-if="isAdminMode" class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1.5">
+                                <i class="fa-solid fa-user-check text-emerald-400"></i>
+                                <span>أدمن مسجل: {{ currentUser.email }}</span>
+                            </span>
+
+                            <button v-if="isAdminMode"
+        @click="logoutAdmin"
+        class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-xl text-xs font-bold transition shadow-md flex items-center gap-1.5"
+        title="تسجيل خروج الأدمن">
+    <i class="fa-solid fa-right-from-bracket"></i>
+    <span>تسجيل الخروج</span>
+</button>
                         </div>
+                        
                     </div>
+                    
                 </div>
+                
             </div>
+            
         </header>
+        
 
         <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
             
