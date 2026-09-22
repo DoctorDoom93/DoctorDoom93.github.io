@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>نظام إدارة الاستشارات الطبية بالمستشفى</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            medical: { 50: '#f0fdfa', 100: '#ccfbf1', 500: '#14b8a6', 600: '#0d9488', 700: '#0f766e', 800: '#115e59', 900: '#134e4a' },
+            hospital: { navy: '#0f172a', blue: '#1e3a8a' }
+          },
+          fontFamily: { sans: ['Tajawal', 'Cairo', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.1/css/all.min.css">
+
+  <!-- Vue 3 & Firebase Compat Scripts -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    body { font-family: 'Tajawal', 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; }
+    [v-cloak] { display: none !important; }
+    
+    /* Smooth Scrollbar for Mobile */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* Custom Status Badges */
+    .status-requested { background: #f1f5f9; color: #475569; }
+    .status-accepted { background: #dbeafe; color: #1d4ed8; }
+    .status-clinic { background: #e0e7ff; color: #3730a3; }
+    .status-heading { background: #fef3c7; color: #b45309; }
+    .status-arrived { background: #ccfbf1; color: #0f766e; }
+    .status-completed { background: #dcfce7; color: #15803d; }
+    .status-cancelled { background: #fee2e2; color: #b91c1c; }
+    .status-discharged { background: #f3e8ff; color: #6b21a8; }
+  </style>
+</head>
+
+<body class="bg-slate-100 text-slate-800 antialiased selection:bg-medical-500 selection:text-white min-h-screen">
+<div id="app" v-cloak class="min-h-screen flex flex-col">
+
+  <div v-if="!session.user" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-hospital-blue to-medical-800">
+    <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl p-6 sm:p-8 relative overflow-hidden my-auto">
+      <div v-if="loadingAuth" class="absolute inset-0 bg-white/80 rounded-3xl flex items-center justify-center z-10">
+        <i class="fa-solid fa-spinner fa-spin text-4xl text-medical-600"></i>
+      </div>
+      <div class="text-center mb-6 sm:mb-8">
+        <div class="mx-auto w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-medical-600 text-white flex items-center justify-center text-2xl sm:text-3xl shadow-lg">
+          <i class="fa-solid fa-hospital-user"></i>
+        </div>
+        <h1 class="text-xl sm:text-2xl font-extrabold mt-4 text-slate-900">تسجيل الدخول للنظام</h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">نظام إدارة الاستشارات الطبية</p>
+      </div>
+
+      <form @submit.prevent="login" class="space-y-4">
+        <div>
+          <label class="block text-xs sm:text-sm font-bold mb-1.5 text-slate-700">اسم المستخدم</label>
+          <input v-model="authForm.username" required class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-medical-500 focus:border-medical-500 transition">
+        </div>
+        <div>
+          <label class="block text-xs sm:text-sm font-bold mb-1.5 text-slate-700">كلمة المرور</label>
+          <input v-model="authForm.password" type="password" required class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-medical-500 focus:border-medical-500 transition">
+        </div>
+        <p v-if="authError" class="text-red-500 text-xs sm:text-sm font-bold text-center bg-red-50 p-2.5 rounded-lg border border-red-200">{{ authError }}</p>
+        <button type="submit" class="w-full py-3.5 bg-medical-600 hover:bg-medical-700 active:scale-[0.99] text-white rounded-xl font-bold text-sm transition shadow-md flex items-center justify-center gap-2">
+          <span>دخول للنظام</span>
+          <i class="fa-solid fa-arrow-left"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <template v-else>
+    <header class="sticky top-0 z-40 bg-slate-900 text-white shadow-md border-b border-slate-800">
+      <!-- Top Info Bar -->
+      <div class="max-w-[1600px] mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-medical-600 flex items-center justify-center text-white text-lg sm:text-xl shrink-0 shadow-sm">
+            <i class="fa-solid fa-user-doctor"></i>
+          </div>
+          <div class="font-extrabold text-sm sm:text-base leading-tight truncate">
+            <span>نظام إدارة الاستشارات الطبية </span>
+            <span class="hidden md:inline text-xs font-normal text-slate-400 block sm:inline"> | مستشفى مبرة العصافرة Capital</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <div class="text-left hidden sm:block">
+            <div class="text-xs sm:text-sm font-bold leading-none">{{ session.user.name }}</div>
+            <div class="text-[11px] text-medical-200 mt-0.5 font-semibold">{{ roleLabel(session.user.role) }}</div>
+          </div>
+          <button @click="logout" title="تسجيل الخروج" class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/10 hover:bg-red-500/20 hover:text-red-400 active:scale-95 transition flex items-center justify-center text-slate-300">
+            <i class="fa-solid fa-power-off text-sm sm:text-base"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs (Touch Scrollable on Mobile) -->
+      <div class="bg-slate-800/80 border-t border-slate-700/50 backdrop-blur-sm">
+        <div class="max-w-[1600px] mx-auto px-2 sm:px-6 flex items-center gap-1.5 overflow-x-auto py-2">
+          
+          <button v-if="['duty_manager', 'hospital_manager', 'ops_manager', 'med_director'].includes(session.user.role)" 
+                  @click="view='analytics'" :class="navClass('analytics')">
+            <i class="fa-solid fa-chart-line"></i>
+            <span>المؤشرات والقيادة</span>
+          </button>
+          
+          <template v-if="session.user.role !== 'admin'">
+            <button @click="view='active'" :class="navClass('active')">
+              <i class="fa-solid fa-notes-medical"></i>
+              <span>نشطة</span>
+              <span class="px-1.5 py-0.5 rounded-full text-[10px] bg-slate-900/40">{{ activeRequests.length }}</span>
+            </button>
+            
+            <button @click="view='completed'" :class="navClass('completed')">
+              <i class="fa-solid fa-circle-check"></i>
+              <span>مكتملة</span>
+              <span class="px-1.5 py-0.5 rounded-full text-[10px] bg-slate-900/40">{{ completedRequests.length }}</span>
+            </button>
+            
+            <button @click="view='cancelled'" :class="navClass('cancelled')">
+              <i class="fa-solid fa-ban"></i>
+              <span>ملغاة</span>
+              <span class="px-1.5 py-0.5 rounded-full text-[10px] bg-slate-900/40">{{ cancelledRequests.length }}</span>
+            </button>
+            
+            <button v-if="session.user.role !== 'nursing' && session.user.role !== 'coordinator'" @click="view='history'" :class="navClass('history')">
+              <i class="fa-solid fa-clock-rotate-left"></i>
+              <span>السجل الكامل</span>
+            </button>
+          </template>
+
+          <template v-if="session.user.role === 'admin'">
+            <button @click="view='users'" :class="navClass('users')">
+              <i class="fa-solid fa-users-gear"></i>
+              <span>إدارة الحسابات والصلاحيات</span>
+            </button>
+          </template>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-[1600px] mx-auto p-3 sm:p-6 w-full flex-1">
+      
+      <!-- Analytics Section -->
+      <section v-if="view==='analytics' && ['duty_manager', 'hospital_manager', 'ops_manager', 'med_director'].includes(session.user.role)">
+        <div class="mb-5 sm:mb-6">
+          <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900">لوحة القيادة والمؤشرات الطبية</h2>
+          <p class="text-slate-500 text-xs sm:text-sm mt-0.5">متابعة إحصائيات الأداء وزمني الاستجابة وأقسام المستشفى</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5 mb-6 sm:mb-8">
+          <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+            <div>
+              <div class="text-slate-500 text-xs sm:text-sm font-bold">إجمالي الاستشارات النشطة</div>
+              <div class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1.5">{{ activeRequests.length }}</div>
+            </div>
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-lg sm:text-xl shrink-0"><i class="fa-solid fa-notes-medical"></i></div>
+          </div>
+
+          <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+            <div>
+              <div class="text-slate-500 text-xs sm:text-sm font-bold">عدد استشارات حرجة / عاجلة</div>
+              <div class="text-2xl sm:text-3xl font-extrabold text-amber-600 mt-1.5">{{ criticalCount }}</div>
+            </div>
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-lg sm:text-xl shrink-0"><i class="fa-solid fa-triangle-exclamation"></i></div>
+          </div>
+
+          <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+            <div>
+              <div class="text-slate-500 text-xs sm:text-sm font-bold">متوسط زمن الاستجابة (حتى الإتمام)</div>
+              <div class="text-2xl sm:text-3xl font-extrabold text-teal-600 mt-1.5">{{ averageResponseTime }} دقيقة</div>
+            </div>
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center text-lg sm:text-xl shrink-0"><i class="fa-solid fa-clock"></i></div>
+          </div>
+
+          <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+            <div>
+              <div class="text-slate-500 text-xs sm:text-sm font-bold">مرضى تمت استشاراتهم اليوم</div>
+              <div class="text-2xl sm:text-3xl font-extrabold text-green-600 mt-1.5">{{ completedTodayCount }}</div>
+            </div>
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-green-50 text-green-600 flex items-center justify-center text-lg sm:text-xl shrink-0"><i class="fa-solid fa-circle-check"></i></div>
+          </div>
+
+          <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+            <div>
+              <div class="text-slate-500 text-xs sm:text-sm font-bold">مرضى ملغى استشارتهم اليوم</div>
+              <div class="text-2xl sm:text-3xl font-extrabold text-red-600 mt-1.5">{{ cancelledTodayCount }}</div>
+            </div>
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-red-50 text-red-600 flex items-center justify-center text-lg sm:text-xl shrink-0"><i class="fa-solid fa-ban"></i></div>
+          </div>
+
+          <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+            <div>
+              <div class="text-slate-500 text-xs sm:text-sm font-bold">مرضى تم خروجهم اليوم</div>
+              <div class="text-2xl sm:text-3xl font-extrabold text-purple-600 mt-1.5">{{ dischargedTodayCount }}</div>
+            </div>
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-lg sm:text-xl shrink-0"><i class="fa-solid fa-person-walking-dashed-line-arrow-right"></i></div>
+          </div>
+        </div>
+
+        <div class="grid lg:grid-cols-2 gap-4 sm:gap-6">
+          <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+            <h3 class="font-extrabold text-base sm:text-lg mb-4 text-slate-800">كفاءة الاستجابة حسب الأماكن والأقسام</h3>
+            <div class="space-y-2.5">
+              <div v-for="(count, loc) in requestsByLocation" :key="loc" class="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                <span class="font-bold text-xs sm:text-sm text-slate-700 truncate ml-2">{{ loc }}</span>
+                <span class="px-2.5 py-1 bg-medical-100 text-medical-800 rounded-lg text-xs font-bold shrink-0">{{ count }} طلبات</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+            <h3 class="font-extrabold text-base sm:text-lg mb-4 text-slate-800">توزيع ضغط الاستشارات حسب التخصص</h3>
+            <div class="space-y-2.5">
+              <div v-for="(count, spec) in requestsBySpecialty" :key="spec" class="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                <span class="font-bold text-xs sm:text-sm text-slate-700 truncate ml-2">{{ spec }}</span>
+                <span class="px-2.5 py-1 bg-blue-100 text-blue-800 rounded-lg text-xs font-bold shrink-0">{{ count }} استشارات</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Users Management (Admin View) -->
+      <section v-if="view==='users' && session.user.role === 'admin'">
+        <div class="mb-5">
+          <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900">إدارة المستخدمين وصلاحيات النظام</h2>
+          <p class="text-slate-500 text-xs sm:text-sm mt-0.5">خاص بـ Admin IT: تسجيل مستخدمين جدد وتوزيع الصلاحيات فقط.</p>
+        </div>
+        <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm max-w-lg relative">
+          <div v-if="loadingAction" class="absolute inset-0 bg-white/60 z-10 flex items-center justify-center"><i class="fa-solid fa-spinner fa-spin text-3xl text-medical-600"></i></div>
+          <form @submit.prevent="registerUser" class="space-y-4">
+            <div>
+              <label class="block text-xs sm:text-sm font-bold mb-1 text-slate-700">الاسم الكامل</label>
+              <input v-model="newUser.name" required class="w-full border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-medical-500 focus:border-medical-500">
+            </div>
+            <div>
+              <label class="block text-xs sm:text-sm font-bold mb-1 text-slate-700">اسم المستخدم</label>
+              <input v-model="newUser.username" required class="w-full border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-medical-500 focus:border-medical-500">
+            </div>
+            <div>
+              <label class="block text-xs sm:text-sm font-bold mb-1 text-slate-700">كلمة المرور</label>
+              <input v-model="newUser.password" type="password" required class="w-full border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-medical-500 focus:border-medical-500">
+            </div>
+            <div>
+              <label class="block text-xs sm:text-sm font-bold mb-1 text-slate-700">المجموعة / الصلاحية</label>
+              <select v-model="newUser.role" required class="w-full border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-medical-500 focus:border-medical-500 font-bold bg-white">
+                <option value="duty_manager">نائب المدير الطبي</option>
+                <option value="med_director">المدير الطبي</option>
+                <option value="hospital_manager">مدير المستشفى</option>
+                <option value="ops_manager">مدير تشغيل المستشفى</option>
+                <option value="coordinator">منسقو العيادات الخارجية</option>
+                <option value="nursing">طاقم التمريض</option>
+                <option value="admin">Admin IT</option>
+              </select>
+            </div>
+            <p v-if="adminMsg" class="text-medical-600 font-bold text-xs sm:text-sm bg-medical-50 p-2.5 rounded-lg">{{ adminMsg }}</p>
+            <button type="submit" class="w-full py-3 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition shadow">
+              إنشاء حساب جديد
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <section v-if="view==='active' && session.user.role !== 'admin'">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+          <div>
+            <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900">طلبات المرضى النشطة الحالية</h2>
+            <p class="text-slate-500 text-xs sm:text-sm mt-0.5">يتم إزالة المريض تلقائياً من هنا بعد الخروج، الإتمام، أو الإلغاء</p>
+          </div>
+          <button v-if="['duty_manager', 'med_director', 'nursing'].includes(session.user.role)" @click="openNewRequest" class="w-full sm:w-auto px-5 py-3 sm:py-2.5 rounded-xl bg-medical-600 hover:bg-medical-700 active:scale-95 text-white font-bold text-sm transition shadow flex items-center justify-center gap-2">
+            <i class="fa-solid fa-plus"></i>
+            <span>إضافة طلب مريض جديد</span>
+          </button>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden relative">
+          <div v-if="loadingData" class="p-10 text-center"><i class="fa-solid fa-spinner fa-spin text-3xl text-medical-600"></i></div>
+          <div v-else>
+            <!-- Mobile Cards View (Visible on Small Screens) -->
+            <div class="block md:hidden divide-y divide-slate-100">
+              <div v-if="activeRequests.length === 0" class="p-8 text-center text-slate-400 text-sm">
+                لا توجد طلبات نشطة حالياً
+              </div>
+              <div v-for="r in activeRequests" :key="r.id" class="p-4 hover:bg-slate-50 transition space-y-3">
+                <div class="flex items-start justify-between gap-2">
+                  <div>
+                    <div class="font-bold text-base text-slate-900 leading-tight">{{ r.patientName }}</div>
+                    <div class="text-slate-500 text-xs mt-1 flex items-center gap-1">
+                      <i class="fa-solid fa-location-dot text-medical-600"></i>
+                      <span>{{ r.location }}</span>
+                    </div>
+                  </div>
+                  <span :class="priorityClass(r.priority)" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold shrink-0">{{ r.priority || 'عادي' }}</span>
+                </div>
+
+                <div class="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
+                  <div>
+                    <span class="text-slate-500 font-medium">التخصص: </span>
+                    <span class="font-bold text-slate-800">{{ r.requestedSpecialty }}</span>
+                  </div>
+                  <div class="text-medical-700 font-bold flex items-center gap-1">
+                    <i class="fa-solid fa-user-md"></i>
+                    <span>{{ r.doctorName || 'لم يتحدد' }}</span>
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between gap-2 pt-2">
+                  <span :class="statusClass(r.status)" class="px-2.5 py-1 rounded-full text-xs font-bold">{{ statusLabel(r.status) }}</span>
+                  <button @click="openDetails(r)" class="px-3.5 py-2 bg-slate-900 text-white hover:bg-slate-800 rounded-lg text-xs font-bold transition flex items-center gap-1.5">
+                    <span>متابعة والإجراءات</span>
+                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Desktop Table View (Hidden on Small Screens) -->
+            <div class="hidden md:block overflow-x-auto">
+              <table class="w-full text-sm text-right">
+                <thead class="bg-slate-50 text-slate-500 border-b">
+                  <tr>
+                    <th class="p-4">المريض / القسم</th>
+                    <th class="p-4">التخصص / الطبيب المحدد</th>
+                    <th class="p-4">الأولوية</th>
+                    <th class="p-4">الحالة الحالية</th>
+                    <th class="p-4 text-center">الإجراءات</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  <tr v-if="activeRequests.length === 0">
+                    <td colspan="5" class="p-8 text-center text-slate-400">لا توجد طلبات نشطة حالياً</td>
+                  </tr>
+                  <tr v-for="r in activeRequests" :key="r.id" class="hover:bg-slate-50 transition">
+                    <td class="p-4">
+                      <div class="font-bold text-base text-slate-900">{{ r.patientName }}</div>
+                      <div class="text-slate-500 text-xs mt-0.5"><i class="fa-solid fa-location-dot ml-1 text-medical-600"></i>{{ r.location }}</div>
+                    </td>
+                    <td class="p-4">
+                      <div class="font-bold text-slate-800">{{ r.requestedSpecialty }}</div>
+                      <div class="text-xs text-medical-700 font-bold mt-1"><i class="fa-solid fa-user-md ml-1"></i>{{ r.doctorName || 'لم يتم التحديد' }}</div>
+                    </td>
+                    <td class="p-4">
+                      <span :class="priorityClass(r.priority)" class="px-2.5 py-1 rounded-full text-xs font-bold">{{ r.priority || 'عادي' }}</span>
+                    </td>
+                    <td class="p-4">
+                      <span :class="statusClass(r.status)" class="px-2.5 py-1 rounded-full text-xs font-bold">{{ statusLabel(r.status) }}</span>
+                    </td>
+                    <td class="p-4 text-center">
+                      <button @click="openDetails(r)" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg font-bold transition text-xs">
+                        متابعة والإجراءات
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section v-if="view==='completed' && session.user.role !== 'admin'">
+        <div class="mb-5">
+          <h2 class="text-xl sm:text-2xl font-extrabold text-green-700">الاستشارات التي تمت (المكتملة)</h2>
+          <p class="text-slate-500 text-xs sm:text-sm mt-0.5">سجل الاستشارات الطبية التي تم إتمامها بنجاح</p>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+          <!-- Mobile Cards View -->
+          <div class="block md:hidden divide-y divide-slate-100">
+            <div v-if="completedRequests.length === 0" class="p-8 text-center text-slate-400 text-sm">
+              لا توجد استشارات مكتملة حتى الآن
+            </div>
+            <div v-for="r in completedRequests" :key="r.id" class="p-4 hover:bg-slate-50 transition space-y-3">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <div class="font-bold text-base text-slate-900 leading-tight">{{ r.patientName }}</div>
+                  <div class="text-slate-500 text-xs mt-0.5">{{ r.location }}</div>
+                </div>
+                <span :class="statusClass(r.status)" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold shrink-0">{{ statusLabel(r.status) }}</span>
+              </div>
+              <div class="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
+                <div class="font-bold text-slate-800">{{ r.requestedSpecialty }} | <span class="text-medical-700">{{ r.doctorName || '—' }}</span></div>
+                <div class="text-[11px] text-slate-500 font-semibold">{{ formatDate(r.completedAt) }}</div>
+              </div>
+              <button @click="openDetails(r)" class="w-full py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs font-bold">
+                عرض الحالات
+              </button>
+            </div>
+          </div>
+
+          <!-- Desktop Table View -->
+          <div class="hidden md:block overflow-x-auto">
+            <table class="w-full text-sm text-right">
+              <thead class="bg-slate-50 text-slate-500 border-b">
+                <tr>
+                  <th class="p-4">المريض / القسم</th>
+                  <th class="p-4">التخصص والطبيب</th>
+                  <th class="p-4">تاريخ ووقت الإتمام</th>
+                  <th class="p-4">الحالة الحالية</th>
+                  <th class="p-4 text-center">عرض والتحديث</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr v-if="completedRequests.length === 0">
+                  <td colspan="5" class="p-8 text-center text-slate-400">لا توجد استشارات مكتملة حتى الآن</td>
+                </tr>
+                <tr v-for="r in completedRequests" :key="r.id" class="hover:bg-slate-50">
+                  <td class="p-4">
+                    <div class="font-bold text-slate-900">{{ r.patientName }}</div>
+                    <div class="text-xs text-slate-500">{{ r.location }}</div>
+                  </td>
+                  <td class="p-4">
+                    <div class="font-bold text-slate-800">{{ r.requestedSpecialty }}</div>
+                    <div class="text-xs text-medical-700 font-bold">{{ r.doctorName || '—' }}</div>
+                  </td>
+                  <td class="p-4 text-xs font-bold text-slate-600">
+                    {{ formatDate(r.completedAt) }}
+                  </td>
+                  <td class="p-4">
+                    <span :class="statusClass(r.status)" class="px-2.5 py-1 rounded-full text-xs font-bold">{{ statusLabel(r.status) }}</span>
+                  </td>
+                  <td class="p-4 text-center">
+                    <button @click="openDetails(r)" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg font-bold text-xs">
+                      عرض الحالات
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section v-if="view==='cancelled' && session.user.role !== 'admin'">
+        <div class="mb-5">
+          <h2 class="text-xl sm:text-2xl font-extrabold text-red-700">الاستشارات الملغاة</h2>
+          <p class="text-slate-500 text-xs sm:text-sm mt-0.5">سجل الطلبات والاستشارات التي تم إلغاؤها</p>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+          <!-- Mobile Cards View -->
+          <div class="block md:hidden divide-y divide-slate-100">
+            <div v-if="cancelledRequests.length === 0" class="p-8 text-center text-slate-400 text-sm">
+              لا توجد استشارات ملغاة
+            </div>
+            <div v-for="r in cancelledRequests" :key="r.id" class="p-4 hover:bg-slate-50 transition space-y-3">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <div class="font-bold text-base text-slate-900 leading-tight">{{ r.patientName }}</div>
+                  <div class="text-slate-500 text-xs mt-0.5">{{ r.location }}</div>
+                </div>
+                <span :class="priorityClass(r.priority)" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold shrink-0">{{ r.priority || 'عادي' }}</span>
+              </div>
+              <div class="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
+                <div class="font-bold text-slate-800">{{ r.requestedSpecialty }} | <span class="text-medical-700">{{ r.doctorName || '—' }}</span></div>
+                <span :class="statusClass(r.status)" class="px-2 py-0.5 rounded-full text-[10px] font-bold">{{ statusLabel(r.status) }}</span>
+              </div>
+              <button @click="openDetails(r)" class="w-full py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs font-bold">
+                عرض الحالات
+              </button>
+            </div>
+          </div>
+
+          <!-- Desktop Table View -->
+          <div class="hidden md:block overflow-x-auto">
+            <table class="w-full text-sm text-right">
+              <thead class="bg-slate-50 text-slate-500 border-b">
+                <tr>
+                  <th class="p-4">المريض / القسم</th>
+                  <th class="p-4">التخصص والطبيب</th>
+                  <th class="p-4">الأولوية</th>
+                  <th class="p-4">الحالة الحالية</th>
+                  <th class="p-4 text-center">عرض والتحديث</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr v-if="cancelledRequests.length === 0">
+                  <td colspan="5" class="p-8 text-center text-slate-400">لا توجد استشارات ملغاة</td>
+                </tr>
+                <tr v-for="r in cancelledRequests" :key="r.id" class="hover:bg-slate-50">
+                  <td class="p-4">
+                    <div class="font-bold text-slate-900">{{ r.patientName }}</div>
+                    <div class="text-xs text-slate-500">{{ r.location }}</div>
+                  </td>
+                  <td class="p-4">
+                    <div class="font-bold text-slate-800">{{ r.requestedSpecialty }}</div>
+                    <div class="text-xs text-medical-700 font-bold">{{ r.doctorName || '—' }}</div>
+                  </td>
+                  <td class="p-4">
+                    <span :class="priorityClass(r.priority)" class="px-2.5 py-1 rounded-full text-xs font-bold">{{ r.priority || 'عادي' }}</span>
+                  </td>
+                  <td class="p-4">
+                    <span :class="statusClass(r.status)" class="px-2.5 py-1 rounded-full text-xs font-bold">{{ statusLabel(r.status) }}</span>
+                  </td>
+                  <td class="p-4 text-center">
+                    <button @click="openDetails(r)" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg font-bold text-xs">
+                      عرض الحالات
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section v-if="view==='history' && session.user.role !== 'admin' && session.user.role !== 'nursing' && session.user.role !== 'coordinator'">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+          <div>
+            <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900">السجل الكامل والأرشيف</h2>
+            <p class="text-slate-500 text-xs sm:text-sm mt-0.5">سجل دائم لكافة الحالات والإجراءات (لا يتم حذف المريض منه نهائياً)</p>
+          </div>
+          <div class="flex items-center gap-2 bg-white p-2 rounded-xl border border-slate-200 shadow-sm shrink-0">
+            <label class="text-xs sm:text-sm font-bold text-slate-600 shrink-0">عرض الإجراءات خلال (أيام):</label>
+            <input type="number" min="1" v-model.number="historyDaysFilter" class="w-16 sm:w-20 border rounded-lg px-2 sm:px-3 py-1 text-center font-bold text-sm outline-none focus:border-medical-500">
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+          <!-- Mobile Cards View -->
+          <div class="block md:hidden divide-y divide-slate-100">
+            <div v-if="filteredHistoryRequests.length === 0" class="p-8 text-center text-slate-400 text-sm">
+              لا توجد سجلات مطابقة لنطاق الأيام المحدد ({{ historyDaysFilter }} يوم)
+            </div>
+            <div v-for="r in filteredHistoryRequests" :key="r.id" class="p-4 hover:bg-slate-50 transition space-y-3">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <div class="font-bold text-base text-slate-900 leading-tight">{{ r.patientName }}</div>
+                  <div class="text-slate-500 text-xs mt-0.5">{{ r.location }}</div>
+                </div>
+                <span :class="statusClass(r.status)" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold shrink-0">{{ statusLabel(r.status) }}</span>
+              </div>
+              <div class="text-xs pt-1 border-t border-slate-100 font-bold text-slate-800">
+                {{ r.requestedSpecialty }} | <span class="text-medical-700">{{ r.doctorName || '—' }}</span>
+              </div>
+              <button @click="openDetails(r)" class="w-full py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1">
+                <i class="fa-solid fa-eye"></i>
+                <span>عرض السجل التاريخي</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Desktop Table View -->
+          <div class="hidden md:block overflow-x-auto">
+            <table class="w-full text-sm text-right">
+              <thead class="bg-slate-50 text-slate-500 border-b">
+                <tr>
+                  <th class="p-4">المريض والمكان</th>
+                  <th class="p-4">التخصص والطبيب</th>
+                  <th class="p-4">الحالة الحالية / النهائية</th>
+                  <th class="p-4 text-center">عرض السجل الإجراءات (قراءة فقط)</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr v-if="filteredHistoryRequests.length === 0">
+                  <td colspan="4" class="p-8 text-center text-slate-400">لا توجد سجلات مطابقة لنطاق الأيام المحدد ({{ historyDaysFilter }} يوم)</td>
+                </tr>
+                <tr v-for="r in filteredHistoryRequests" :key="r.id" class="hover:bg-slate-50">
+                  <td class="p-4">
+                    <div class="font-bold text-base text-slate-900">{{ r.patientName }}</div>
+                    <div class="text-slate-500 text-xs mt-0.5">{{ r.location }}</div>
+                  </td>
+                  <td class="p-4">
+                    <div class="font-bold text-slate-800">{{ r.requestedSpecialty }}</div>
+                    <div class="text-xs text-medical-700 font-bold mt-0.5">{{ r.doctorName || '—' }}</div>
+                  </td>
+                  <td class="p-4">
+                    <span :class="statusClass(r.status)" class="px-2.5 py-1 rounded-full text-xs font-bold">{{ statusLabel(r.status) }}</span>
+                  </td>
+                  <td class="p-4 text-center">
+                    <button @click="openDetails(r)" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg font-bold text-xs transition">
+                      <i class="fa-solid fa-eye ml-1"></i> عرض السجل التاريخي
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    
+    <!-- New Request Modal -->
+    <div v-if="modal==='new'" class="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
+      <div class="bg-white rounded-t-3xl sm:rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl relative max-h-[92vh] flex flex-col">
+        <div class="p-4 sm:p-5 border-b flex justify-between items-center bg-slate-50 shrink-0">
+          <h3 class="font-extrabold text-base sm:text-lg text-slate-900">إضافة طلب مريض جديد</h3>
+          <button @click="modal=null" class="w-8 h-8 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-600 transition flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form @submit.prevent="createRequest" class="p-4 sm:p-5 space-y-4 overflow-y-auto">
+          <div>
+            <label class="block text-xs sm:text-sm font-bold mb-1 text-slate-700">اسم المريض</label>
+            <input v-model="form.patientName" required class="w-full border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-medical-500 focus:border-medical-500">
+          </div>
+          <div>
+            <label class="block text-xs sm:text-sm font-bold mb-1 text-slate-700">المكان / القسم بالمستشفى</label>
+            <select v-model="form.location" required class="w-full border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-medical-500 focus:border-medical-500 font-bold bg-white">
+              <option v-for="loc in locations" :key="loc" :value="loc">{{ loc }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs sm:text-sm font-bold mb-1 text-slate-700">التخصص المطلوب</label>
+            <select v-model="form.requestedSpecialty" required class="w-full border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-medical-500 focus:border-medical-500 font-bold bg-white">
+              <option v-for="sp in specialties" :key="sp" :value="sp">{{ sp }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs sm:text-sm font-bold mb-1 text-slate-700">اسم الطبيب المحدد</label>
+            <input v-model="form.doctorName" placeholder="اكتب اسم الطبيب المحدد..." class="w-full border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-medical-500 focus:border-medical-500">
+          </div>
+          <div>
+            <label class="block text-xs sm:text-sm font-bold mb-1 text-slate-700">درجة الأولوية</label>
+            <select v-model="form.priority" required class="w-full border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-medical-500 focus:border-medical-500 font-bold bg-white">
+              <option value="عادي">عادي</option>
+              <option value="عاجل">عاجل</option>
+              <option value="عاجل للاهمية القصوى">عاجل للاهمية القصوى</option>
+            </select>
+          </div>
+          <button type="submit" class="w-full py-3 bg-medical-600 text-white rounded-xl font-bold text-sm hover:bg-medical-700 transition shadow-md">إضافة وتفعيل الطلب</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Details and Actions Modal -->
+    <div v-if="modal==='details' && selected" class="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
+      <div class="bg-white rounded-t-3xl sm:rounded-2xl w-full max-w-4xl overflow-hidden shadow-2xl relative flex flex-col max-h-[92vh]">
+        
+        <!-- Header -->
+        <div class="p-4 sm:p-5 border-b flex justify-between items-start bg-slate-50 shrink-0">
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <h3 class="font-extrabold text-base sm:text-xl text-slate-900">{{ selected.patientName }}</h3>
+              <span :class="statusClass(selected.status)" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold">{{ statusLabel(selected.status) }}</span>
+              <span :class="priorityClass(selected.priority)" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold">{{ selected.priority || 'عادي' }}</span>
+            </div>
+            <div class="text-xs sm:text-sm text-slate-500 mt-1 font-semibold">{{ selected.requestedSpecialty }} | {{ selected.location }}</div>
+          </div>
+          <button @click="modal=null" class="w-8 h-8 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-600 transition flex items-center justify-center shrink-0"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        
+        <!-- Body Container -->
+        <div class="p-4 sm:p-6 overflow-y-auto grid grid-cols-1 lg:grid-cols-5 gap-5">
+          
+          <!-- Actions Column -->
+          <div class="lg:col-span-3 space-y-4">
+            
+            <div v-if="view==='history'" class="bg-amber-50 border border-amber-200 rounded-xl p-3.5 text-xs sm:text-sm text-amber-900 font-bold flex items-start gap-3">
+              <i class="fa-solid fa-lock text-lg text-amber-600 mt-0.5 shrink-0"></i>
+              <div>
+                <span>ملاحظة النظام</span>
+                <p class="font-normal text-xs mt-0.5">تبويب السجل الكامل مخصص للعرض فقط؛ لا يسمح بتعديل أي بيانات تخص المريض نهائياً في هذا التبويب.</p>
+              </div>
+            </div>
+
+            <div v-else-if="['completed', 'cancelled'].includes(view)" class="bg-slate-50 border rounded-xl p-4 space-y-3">
+              <h4 class="font-extrabold text-sm sm:text-base text-slate-800 border-b pb-2 flex items-center gap-1.5"><i class="fa-solid fa-door-open text-purple-600"></i> الإجراء المتاح في هذا التبويب</h4>
+              
+              <div v-if="['duty_manager', 'med_director', 'nursing'].includes(session.user.role)">
+                <p class="text-xs text-slate-600 mb-3 font-semibold">يُسمح للمدير الطبي ونائب المدير الطبي وطاقم التمريض فقط بإضافة "خروج الحالة" بعد إتمام الاستشارة أو إلغائها:</p>
+                
+                <button v-if="selected.status !== 'discharged'" @click="quickUpdate('discharged', 'الإبلاغ عن خروج المريض من المستشفى')" 
+                        class="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition shadow">
+                  <span>خروج المريض</span>
+                  <i class="fa-solid fa-person-walking-dashed-line-arrow-right"></i>
+                </button>
+
+                <div v-else class="bg-purple-100 text-purple-900 p-3 rounded-lg text-xs font-bold text-center">
+                  <i class="fa-solid fa-check ml-1"></i> تم تسجيل خروج المريض بالفعل.
+                </div>
+              </div>
+
+              <div v-else class="text-xs text-slate-500">
+                لا توجد إجراءات متاحة لمجموعتك في هذا التبويب (العرض فقط).
+              </div>
+            </div>
+
+            <div v-else-if="canModifyActive" class="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 sm:p-4">
+              <h4 class="font-extrabold mb-3 text-xs sm:text-sm text-slate-800 border-b pb-2 flex items-center gap-1.5"><i class="fa-solid fa-bolt text-amber-500"></i> الأزرار والإجراءات المتاحة بحسب صلاحية مجموعتك</h4>
+              
+              <div v-if="['duty_manager', 'med_director', 'coordinator'].includes(session.user.role)" class="mb-4 bg-white p-3 rounded-xl border border-slate-200">
+                <label class="block text-xs font-bold text-slate-700 mb-1">إضافة / تغيير الطبيب:</label>
+                <div class="flex flex-col sm:flex-row gap-2">
+                  <input v-model="edit.doctorName" placeholder="اسم الطبيب..." class="flex-1 border rounded-lg px-3 py-2 text-xs sm:text-sm outline-none focus:border-medical-500">
+                  <button @click="updateDoctorName" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs sm:text-sm font-bold transition">حفظ الطبيب</button>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
+                
+                <button v-if="['duty_manager', 'med_director', 'coordinator'].includes(session.user.role)" 
+                        @click="quickUpdate('accepted', 'تم قبول الحالة من قبل الطبيب')" 
+                        class="py-2.5 px-3 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-between border border-blue-200 transition">
+                  <span>قبول الحالة</span> <i class="fa-solid fa-thumbs-up"></i>
+                </button>
+
+                <button v-if="['duty_manager', 'med_director', 'coordinator'].includes(session.user.role)" 
+                        @click="quickUpdate('doctor_at_clinic', 'الإبلاغ عن تواجد الطبيب بالعيادة')" 
+                        class="py-2.5 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-between border border-indigo-200 transition">
+                  <span>تواجد الطبيب بالعيادة</span> <i class="fa-solid fa-hospital-user"></i>
+                </button>
+
+                <button v-if="['duty_manager', 'med_director', 'coordinator'].includes(session.user.role)" 
+                        @click="quickUpdate('heading', 'الإبلاغ عن صعود الطبيب من العيادة إلى المريض')" 
+                        class="py-2.5 px-3 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-between border border-amber-200 transition">
+                  <span>صعود الطبيب للحالة</span> <i class="fa-solid fa-person-walking-arrow-right"></i>
+                </button>
+                
+                <button v-if="['duty_manager', 'med_director', 'nursing'].includes(session.user.role)" 
+                        @click="quickUpdate('arrived', 'الإبلاغ عن تواجد ووصول الطبيب لدى المريض')" 
+                        class="py-2.5 px-3 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-between border border-teal-200 transition">
+                  <span>وصول الطبيب لدى الحالة</span> <i class="fa-solid fa-user-check"></i>
+                </button>
+
+                <button v-if="['duty_manager', 'med_director', 'nursing'].includes(session.user.role)" 
+                        @click="quickUpdate('completed', 'الإبلاغ عن إتمام الاستشارة الطبية')" 
+                        class="py-2.5 px-3 bg-green-50 hover:bg-green-100 text-green-800 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-between border border-green-200 transition">
+                  <span>إتمام الاستشارة</span> <i class="fa-solid fa-check-circle"></i>
+                </button>
+
+                <button v-if="['duty_manager', 'med_director', 'nursing'].includes(session.user.role)" 
+                        @click="quickUpdate('cancelled', 'تم إلغاء الاستشارة الطبية')" 
+                        class="py-2.5 px-3 bg-red-50 hover:bg-red-100 text-red-800 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-between border border-red-200 transition">
+                  <span>إلغاء الاستشارة</span> <i class="fa-solid fa-ban"></i>
+                </button>
+
+                <button v-if="['duty_manager', 'med_director', 'nursing'].includes(session.user.role)" 
+                        @click="quickUpdate('discharged', 'الإبلاغ عن خروج المريض من المستشفى')" 
+                        class="py-2.5 px-3 bg-purple-50 hover:bg-purple-100 text-purple-800 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-between border border-purple-200 transition">
+                  <span>خروج المريض</span> <i class="fa-solid fa-person-walking-dashed-line-arrow-right"></i>
+                </button>
+
+              </div>
+            </div>
+
+            <div v-if="['hospital_manager', 'ops_manager'].includes(session.user.role)" class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-xs sm:text-sm text-blue-900 flex items-center gap-3">
+              <i class="fa-solid fa-eye text-xl text-blue-600 shrink-0"></i>
+              <div>
+                <span class="font-bold block">وضع المتابعة والاطلاع</span>
+                تابع تقدم الاستشارات الطبية والإجراءات لحظياً.
+              </div>
+            </div>
+
+          </div>
+
+          <!-- History Timeline Column -->
+          <div class="lg:col-span-2 border-t lg:border-t-0 lg:border-r border-slate-200 pt-4 lg:pt-0 lg:pr-5">
+            <h4 class="font-extrabold mb-3 text-xs sm:text-sm text-slate-800 flex items-center gap-1.5">
+              <i class="fa-solid fa-timeline text-medical-600"></i> السجل التاريخي للحالة
+            </h4>
+            <div class="space-y-2.5 max-h-[350px] sm:max-h-[450px] overflow-y-auto pl-1">
+              <div v-for="(log, idx) in selected.history" :key="idx" class="flex items-start gap-2.5 text-xs bg-slate-50 p-3 rounded-xl border border-slate-200/80">
+                <div class="w-2 h-2 rounded-full bg-medical-600 mt-1 shrink-0 shadow-sm"></div>
+                <div>
+                  <div class="font-bold text-slate-900">{{ log.statusLabel }}</div>
+                  <div class="text-slate-600 mt-0.5 text-[11px] leading-snug">{{ log.note }}</div>
+                  <div class="text-[10px] text-slate-400 mt-1 font-semibold">{{ log.time }} · بواسطة: <b class="text-slate-700">{{ log.user }}</b></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </template>
+
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDRHqwxfymU6IOtLTcLM5iZqPqkOGkkHhg",
+  authDomain: "mab-cap-doctors-requests.firebaseapp.com",
+  projectId: "mab-cap-doctors-requests",
+  storageBucket: "mab-cap-doctors-requests.firebasestorage.app",
+  messagingSenderId: "66127771750",
+  appId: "1:66127771750:web:d22db3876d6347db3055a7",
+  measurementId: "G-0Z9K6X1V3C"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+const { createApp } = Vue;
+
+createApp({
+  data() {
+    return {
+      session: { user: null },
+      view: 'active',
+      modal: null,
+      selected: null,
+      requests: [],
+      unsubscribe: null,
+      historyDaysFilter: 1,
+      
+      loadingAuth: false,
+      loadingData: false,
+      loadingAction: false,
+      
+      authForm: { username: '', password: '' },
+      authError: '',
+      
+      newUser: { name: '', username: '', password: '', role: 'duty_manager' },
+      adminMsg: '',
+      
+      edit: { doctorName: '' },
+      form: { patientName: '', location: '', requestedSpecialty: '', doctorName: '', priority: 'عادي' },
+      
+      locations: ['العناية المركزة (ICU)', 'عناية القلب (CCU)', 'الطوارئ (ER)', 'الدور التاسع Station A', 'الدور التاسع Station B', 'الدور العاشر Station A', 'الدور العاشر Station B'],
+      specialties: ['جراحة عامة', 'باطنة', 'قلب والأوعية الدموية', 'أطفال', 'عظام', 'نساء وتوليد', 'تخدير ورعاية', 'مخ وأعصاب']
+    };
+  },
+  computed: {
+    activeRequests() {
+      return this.requests.filter(r => !['discharged', 'completed', 'cancelled'].includes(r.status));
+    },
+    completedRequests() {
+      return this.requests.filter(r => r.status === 'completed');
+    },
+    cancelledRequests() {
+      return this.requests.filter(r => r.status === 'cancelled');
+    },
+    filteredHistoryRequests() {
+      const days = this.historyDaysFilter > 0 ? this.historyDaysFilter : 30;
+      const limitTime = Date.now() - (days * 24 * 60 * 60 * 1000);
+      return this.requests.filter(r => (r.createdAt || 0) >= limitTime);
+    },
+    canModifyActive() {
+      return ['duty_manager', 'med_director', 'coordinator', 'nursing'].includes(this.session.user.role);
+    },
+    criticalCount() {
+      return this.requests.filter(r => r.priority === 'عاجل' || r.priority === 'عاجل للاهمية القصوى').length;
+    },
+    completedTodayCount() {
+      const todayStr = new Date().toDateString();
+      return this.requests.filter(r => r.status === 'completed' && r.completedAt && new Date(r.completedAt).toDateString() === todayStr).length;
+    },
+    cancelledTodayCount() {
+      const todayStr = new Date().toDateString();
+      return this.requests.filter(r => r.status === 'cancelled' && r.updatedAt && new Date(r.updatedAt).toDateString() === todayStr).length;
+    },
+    dischargedTodayCount() {
+      const todayStr = new Date().toDateString();
+      return this.requests.filter(r => r.status === 'discharged' && r.updatedAt && new Date(r.updatedAt).toDateString() === todayStr).length;
+    },
+    averageResponseTime() {
+      const completedReqs = this.requests.filter(r => r.completedAt && r.createdAt);
+      if (completedReqs.length === 0) return 0;
+      let totalMinutes = 0;
+      completedReqs.forEach(r => {
+        const diffMs = r.completedAt - r.createdAt;
+        totalMinutes += diffMs / (1000 * 60);
+      });
+      return Math.round(totalMinutes / completedReqs.length);
+    },
+    requestsByLocation() {
+      const map = {};
+      this.requests.forEach(r => {
+        map[r.location] = (map[r.location] || 0) + 1;
+      });
+      return map;
+    },
+    requestsBySpecialty() {
+      const map = {};
+      this.requests.forEach(r => {
+        map[r.requestedSpecialty] = (map[r.requestedSpecialty] || 0) + 1;
+      });
+      return map;
+    }
+  },
+  methods: {
+    async login() {
+      this.loadingAuth = true;
+      this.authError = '';
+      try {
+        const snapshot = await db.collection('users')
+          .where('username', '==', this.authForm.username)
+          .where('password', '==', this.authForm.password)
+          .get();
+          
+        if (snapshot.empty) {
+          this.authError = 'اسم المستخدم أو كلمة المرور غير صحيحة.';
+        } else {
+          const userData = snapshot.docs[0].data();
+          this.session.user = { id: snapshot.docs[0].id, ...userData };
+          
+          if (userData.role === 'admin') {
+            this.view = 'users';
+          } else if (userData.role === 'nursing') {
+            this.view = 'active';
+          } else if (['hospital_manager', 'ops_manager', 'med_director', 'duty_manager'].includes(userData.role)) {
+            this.view = 'analytics';
+          } else {
+            this.view = 'active';
+          }
+          this.fetchRequests();
+        }
+      } catch (err) {
+        this.authError = 'حدث خطأ أثناء الاتصال بقاعدة البيانات.';
+      }
+      this.loadingAuth = false;
+    },
+    logout() {
+      this.session.user = null;
+      if (this.unsubscribe) this.unsubscribe();
+      this.requests = [];
+      this.authForm = { username: '', password: '' };
+    },
+    async registerUser() {
+      this.loadingAction = true;
+      this.adminMsg = '';
+      try {
+        await db.collection('users').add(this.newUser);
+        this.adminMsg = 'تم تسجيل المستخدم بنجاح وتوزيع الصلاحية.';
+        this.newUser = { name: '', username: '', password: '', role: 'duty_manager' };
+      } catch (err) {
+        this.adminMsg = 'حدث خطأ أثناء تسجيل المستخدم.';
+      }
+      this.loadingAction = false;
+    },
+    fetchRequests() {
+      this.loadingData = true;
+      this.unsubscribe = db.collection('requests').orderBy('timestamp', 'desc').onSnapshot(snapshot => {
+        const reqs = [];
+        snapshot.forEach(doc => {
+          reqs.push({ id: doc.id, ...doc.data() });
+        });
+        this.requests = reqs;
+        this.loadingData = false;
+        if (this.selected) {
+          const updated = reqs.find(r => r.id === this.selected.id);
+          if (updated) this.selected = updated;
+        }
+      });
+    },
+    navClass(tab) {
+      const active = this.view === tab;
+      return `px-3.5 py-2 rounded-xl font-bold text-xs sm:text-sm transition flex items-center gap-2 whitespace-nowrap shrink-0 ${active ? 'bg-medical-600 text-white shadow-sm' : 'hover:bg-slate-700/80 text-slate-300'}`;
+    },
+    roleLabel(role) {
+      const labels = {
+        'duty_manager': 'نائب المدير الطبي',
+        'med_director': 'المدير الطبي',
+        'hospital_manager': 'مدير المستشفى',
+        'ops_manager': 'مدير تشغيل المستشفى',
+        'coordinator': 'منسق العيادات الخارجية',
+        'nursing': 'طاقم التمريض',
+        'admin': 'Admin IT'
+      };
+      return labels[role] || role;
+    },
+    statusLabel(status) {
+      const labels = { 
+        'requested': 'قيد الانتظار والطلب', 
+        'accepted': 'تم قبول الحالة', 
+        'doctor_at_clinic': 'تواجد الطبيب بالعيادة',
+        'heading': 'صعود الطبيب للحالة', 
+        'arrived': 'وصول الطبيب لدى الحالة', 
+        'completed': 'مكتمل (تمت الاستشارة)', 
+        'cancelled': 'إلغاء الاستشارة',
+        'discharged': 'تم خروج المريض' 
+      };
+      return labels[status] || status;
+    },
+    statusClass(status) {
+      const classes = { 
+        'requested': 'status-requested', 
+        'accepted': 'status-accepted', 
+        'doctor_at_clinic': 'status-clinic',
+        'heading': 'status-heading', 
+        'arrived': 'status-arrived', 
+        'completed': 'status-completed', 
+        'cancelled': 'status-cancelled',
+        'discharged': 'status-discharged'
+      };
+      return classes[status] || 'bg-slate-200 text-slate-700';
+    },
+    priorityClass(priority) {
+      if (priority === 'عاجل للاهمية القصوى' || priority === 'عاجل للأهمية القصوى') return 'bg-red-100 text-red-800 border border-red-300';
+      if (priority === 'عاجل') return 'bg-amber-100 text-amber-800 border border-amber-300';
+      return 'bg-slate-100 text-slate-700 border border-slate-200';
+    },
+    formatDate(ts) {
+      if (!ts) return '—';
+      return new Date(ts).toLocaleString('ar-EG');
+    },
+    openNewRequest() {
+      this.form = { patientName: '', location: this.locations[0], requestedSpecialty: this.specialties[0], doctorName: '', priority: 'عادي' };
+      this.modal = 'new';
+    },
+    async createRequest() {
+      try {
+        const now = Date.now();
+        const timeNow = new Date().toLocaleTimeString('ar-EG');
+        await db.collection('requests').add({
+          patientName: this.form.patientName,
+          location: this.form.location,
+          requestedSpecialty: this.form.requestedSpecialty,
+          doctorName: this.form.doctorName,
+          priority: this.form.priority,
+          status: 'requested',
+          createdAt: now,
+          updatedAt: now,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          history: [{
+            statusLabel: 'إضافة طلب استدعاء جديد',
+            note: `الأولوية: ${this.form.priority} - ${this.form.doctorName ? 'الطبيب المحدد: ' + this.form.doctorName : 'لم يتم تحديد طبيب مبدئياً'}`,
+            time: timeNow,
+            user: this.session.user.name
+          }]
+        });
+        this.modal = null;
+      } catch (err) {
+        alert('حدث خطأ أثناء إضافة الطلب');
+      }
+    },
+    openDetails(req) {
+      this.selected = req;
+      this.edit.doctorName = req.doctorName || '';
+      this.modal = 'details';
+    },
+    async updateDoctorName() {
+      if (!this.edit.doctorName.trim() || !this.selected) return;
+      try {
+        const timeNow = new Date().toLocaleTimeString('ar-EG');
+        const newHistory = [{
+          statusLabel: 'إضافة / تغيير الطبيب',
+          note: `تم تعيين الطبيب: ${this.edit.doctorName}`,
+          time: timeNow,
+          user: this.session.user.name
+        }, ...(this.selected.history || [])];
+        
+        await db.collection('requests').doc(this.selected.id).update({
+          doctorName: this.edit.doctorName,
+          updatedAt: Date.now(),
+          history: newHistory
+        });
+      } catch(err) { console.error(err); }
+    },
+
+    async quickUpdate(newStatus, defaultNote) {
+      if (!this.selected) return;
+
+      if (this.view === 'history') {
+        alert('غير مسموح بتعديل أي بيانات في تبويب السجل نهائياً.');
+        return;
+      }
+
+      if (['completed', 'cancelled'].includes(this.view) && newStatus !== 'discharged') {
+        alert('الإجراء الوحيد المسموح به هنا هو تسجيل خروج الحالة فقط.');
+        return;
+      }
+
+      try {
+        const timeNow = new Date().toLocaleTimeString('ar-EG');
+        const updateData = {
+          status: newStatus,
+          updatedAt: Date.now(),
+          history: [{
+            statusLabel: this.statusLabel(newStatus),
+            note: defaultNote,
+            time: timeNow,
+            user: this.session.user.name
+          }, ...(this.selected.history || [])]
+        };
+
+        if (newStatus === 'completed') {
+          updateData.completedAt = Date.now();
+        }
+
+        await db.collection('requests').doc(this.selected.id).update(updateData);
+        
+        if (['discharged', 'completed', 'cancelled'].includes(newStatus)) {
+          setTimeout(() => { this.modal = null; }, 300);
+        }
+      } catch(err) { console.error(err); }
+    }
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
