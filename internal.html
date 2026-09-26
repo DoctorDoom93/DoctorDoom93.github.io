@@ -828,6 +828,20 @@ createApp({
       specialties: ['جراحة عامة', 'باطنة', 'قلب والأوعية الدموية', 'أطفال', 'عظام', 'نساء وتوليد', 'تخدير ورعاية', 'مخ وأعصاب']
     };
   },
+  mounted() {
+    // استرجاع بيانات الجلسة المحفوظة عند فتح أو تحديث الصفحة
+    const savedUser = localStorage.getItem('app_session_user');
+    if (savedUser) {
+      try {
+        const userData = JSON.parse(savedUser);
+        this.session.user = userData;
+        this.setInitialView(userData.role);
+        this.fetchRequests();
+      } catch (e) {
+        localStorage.removeItem('app_session_user');
+      }
+    }
+  },
   computed: {
     activeRequests() {
       return this.requests.filter(r => !['discharged', 'completed', 'cancelled'].includes(r.status));
@@ -887,6 +901,17 @@ createApp({
     }
   },
   methods: {
+    setInitialView(role) {
+      if (role === 'admin') {
+        this.view = 'users';
+      } else if (role === 'nursing') {
+        this.view = 'active';
+      } else if (['hospital_manager', 'ops_manager', 'med_director', 'duty_manager'].includes(role)) {
+        this.view = 'analytics';
+      } else {
+        this.view = 'active';
+      }
+    },
     async login() {
       this.loadingAuth = true;
       this.authError = '';
@@ -899,18 +924,13 @@ createApp({
         if (snapshot.empty) {
           this.authError = 'اسم المستخدم أو كلمة المرور غير صحيحة.';
         } else {
-          const userData = snapshot.docs[0].data();
-          this.session.user = { id: snapshot.docs[0].id, ...userData };
+          const userData = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
+          this.session.user = userData;
           
-          if (userData.role === 'admin') {
-            this.view = 'users';
-          } else if (userData.role === 'nursing') {
-            this.view = 'active';
-          } else if (['hospital_manager', 'ops_manager', 'med_director', 'duty_manager'].includes(userData.role)) {
-            this.view = 'analytics';
-          } else {
-            this.view = 'active';
-          }
+          // حفظ بيانات الجلسة في المتصفح لمقاومة Refresh
+          localStorage.setItem('app_session_user', JSON.stringify(userData));
+          
+          this.setInitialView(userData.role);
           this.fetchRequests();
         }
       } catch (err) {
@@ -920,60 +940,57 @@ createApp({
     },
     logout() {
       this.session.user = null;
+      // مسح بيانات الجلسة عند تسجيل الخروج يدوياً فقط
+      localStorage.removeItem('app_session_user');
       if (this.unsubscribe) this.unsubscribe();
       this.requests = [];
       this.authForm = { username: '', password: '' };
     },
     async registerUser() {
-  this.loadingAction = true;
-  this.adminMsg = '';
-  try {
-    // 1. تنظيف البيانات والتحقق من الحقول
-    const username = this.newUser.username ? this.newUser.username.trim() : '';
-    const name = this.newUser.name ? this.newUser.name.trim() : '';
-    const password = this.newUser.password || '';
-    const role = this.newUser.role || 'duty_manager';
+      this.loadingAction = true;
+      this.adminMsg = '';
+      try {
+        const username = this.newUser.username ? this.newUser.username.trim() : '';
+        const name = this.newUser.name ? this.newUser.name.trim() : '';
+        const password = this.newUser.password || '';
+        const role = this.newUser.role || 'duty_manager';
 
-    if (!username || !name || !password) {
-      this.adminMsg = 'يرجى إدخال جميع البيانات المطلوبة.';
+        if (!username || !name || !password) {
+          this.adminMsg = 'يرجى إدخال جميع البيانات المطلوبة.';
+          this.loadingAction = false;
+          return;
+        }
+
+        const checkSnapshot = await db.collection('users')
+          .where('username', '==', username)
+          .get();
+
+        if (!checkSnapshot.empty) {
+          this.adminMsg = 'اسم المستخدم هذا مكرر وموجود بالفعل، اختر اسماً آخر.';
+          this.loadingAction = false;
+          return;
+        }
+
+        await db.collection('users').add({
+          name: name,
+          username: username,
+          password: password,
+          role: role,
+          createdAt: Date.now()
+        });
+
+        this.adminMsg = 'تم تسجيل المستخدم بنجاح وتوزيع الصلاحية.';
+        this.newUser = { name: '', username: '', password: '', role: 'duty_manager' };
+      } catch (err) {
+        console.error('خطأ Firebase أثناء تسجيل المستخدم:', err);
+        if (err.code === 'permission-denied') {
+          this.adminMsg = 'تم رفض الطلب: تم منع الإضافة بواسطة قواعد أمان Firestore (Rules).';
+        } else {
+          this.adminMsg = 'حدث خطأ: ' + (err.message || 'فشلت عملية التسجيل.');
+        }
+      }
       this.loadingAction = false;
-      return;
-    }
-
-    // 2. التحقق من عدم تكرار اسم المستخدم في قاعدة البيانات
-    const checkSnapshot = await db.collection('users')
-      .where('username', '==', username)
-      .get();
-
-    if (!checkSnapshot.empty) {
-      this.adminMsg = 'اسم المستخدم هذا مكرر وموجود بالفعل، اختر اسماً آخر.';
-      this.loadingAction = false;
-      return;
-    }
-
-    // 3. إضافة المستخدم كـ Plain Object لتجنب مشاكل كائنات Vue التفاعلية
-    await db.collection('users').add({
-      name: name,
-      username: username,
-      password: password,
-      role: role,
-      createdAt: Date.now()
-    });
-
-    this.adminMsg = 'تم تسجيل المستخدم بنجاح وتوزيع الصلاحية.';
-    this.newUser = { name: '', username: '', password: '', role: 'duty_manager' };
-  } catch (err) {
-    console.error('خطأ Firebase أثناء تسجيل المستخدم:', err);
-    
-    // تشخيص الخطأ بالتفصيل معرفة سببه
-    if (err.code === 'permission-denied') {
-      this.adminMsg = 'تم رفض الطلب: تم منع الإضافة بواسطة قواعد أمان Firestore (Rules).';
-    } else {
-      this.adminMsg = 'حدث خطأ: ' + (err.message || 'فشلت عملية التسجيل.');
-    }
-  }
-  this.loadingAction = false;
-},
+    },
     fetchRequests() {
       this.loadingData = true;
       this.unsubscribe = db.collection('requests').orderBy('timestamp', 'desc').onSnapshot(snapshot => {
