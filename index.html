@@ -252,7 +252,7 @@
                                 <span class="block text-slate-400">إجمالي الأطباء</span>
                                 <span class="font-bold text-slate-800 text-sm">{{ doctors.length }}</span>
                             </div>
-                            <div class="text-center border-l border-slate-200">
+                            <div class="text-center border-slate-200">
                                 <span class="block text-slate-400">مناوبون اليوم</span>
                                 <span class="font-bold text-emerald-600 text-sm">{{ todaysOnCallCount }}</span>
                             </div>
@@ -439,7 +439,7 @@
                         <button @click="statusFilter = 'all'" 
                                 :class="statusFilter === 'all' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
                                 class="px-3 py-1.5 rounded-lg transition">
-                            الكل ({{ filteredDoctors.length }})
+                            الكل
                         </button>
 
                     </div>
@@ -458,9 +458,6 @@
                     </div>
                     <h4 class="text-base font-bold text-slate-800">لا يوجد أطباء مطابقون</h4>
                     <p class="text-xs text-slate-500 mt-1 mb-4">لا يوجد أطباء مسجلون في هذا اليوم أو بهذا التخصص.</p>
-                    <button @click="resetFilters" class="px-4 py-2 bg-medical-700 hover:bg-medical-800 text-white text-xs font-bold rounded-xl transition">
-                        إعادة ضبط الفلاتر
-                    </button>
                 </div>
 
                 <!-- Doctors Cards Grid -->
