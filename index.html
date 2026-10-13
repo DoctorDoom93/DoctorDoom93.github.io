@@ -48,9 +48,9 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 
     <!-- Firebase JS SDK (v12.19 Compat Version: App, Firestore, and Auth) -->
-    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/13.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/13.0.0/firebase-auth-compat.js"></script>
     
     <style>
         body {
@@ -1340,7 +1340,7 @@
                             const cleanName = doctorForm.value.name.replace(/^د\.\s*/, '').trim();
                             await db.collection('doctors').add({
                                 ...payload,
-                                avatar: `https://ui-https://placehold.co/150x150/0f766e/ffffff?text=Doctor`
+                                avatar: `https://placehold.co/150x150/0f766e/ffffff?text=Doctor`
                             });
                             showToast('تمت إضافة الطبيب الجديد بنجاح');
                         }
