@@ -177,7 +177,7 @@
                     <button v-if="isAdminMode"
                         @click="logoutAdmin"
                         class="bg-red-500 hover:bg-red-600 text-white border border-red-600/60 px-2 py-1 rounded-xl text-xs font-semibold transition shadow-sm flex items-center gap-2"
-                        title="تسجيل خروج الأدمن">
+                        title="تسجيل خروج الإدارة">
                         <i class="fa-solid fa-right-from-bracket"></i>
                         <span>تسجيل الخروج</span>
                     </button>
@@ -444,7 +444,7 @@
                 <!-- Loading Spinner State -->
                 <div v-if="isLoading" class="py-16 text-center">
                     <div class="inline-block w-10 h-10 border-4 border-medical-600 border-t-transparent rounded-full animate-spin mb-3"></div>
-                    <p class="text-sm font-bold text-slate-600">جاري تحميل بيانات الأطباء من Firebase...</p>
+                    <p class="text-sm font-bold text-slate-600">جاري تحميل بيانات الأطباء من قاعدة البيانات...</p>
                 </div>
 
                 <!-- Empty State -->
@@ -571,8 +571,8 @@
                     <div class="w-14 h-14 bg-teal-100 text-medical-700 rounded-2xl flex items-center justify-center mx-auto mb-3 text-2xl shadow-sm">
                         <i class="fa-solid fa-user-shield"></i>
                     </div>
-                    <h3 class="text-xl font-bold text-slate-900">تسجيل دخول المسؤول (Admin)</h3>
-                    <p class="text-xs text-slate-500 mt-1">سجل الدخول باستخدام حساب الأدمن المسجل في Firebase Console لإدارة المناوبات والجدول</p>
+                    <h3 class="text-xl font-bold text-slate-900">تسجيل دخول الإدارة</h3>
+                    <p class="text-xs text-slate-500 mt-1">سجل الدخول باستخدام حساب الإدارة المسجل في قاعدة البيانات لإدارة المناوبات والجدول</p>
                 </div>
 
                 <form @submit.prevent="loginAdmin" class="space-y-4">
@@ -582,7 +582,7 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">البريد الإلكتروني للأدمن</label>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">البريد الإلكتروني للإدارة</label>
                         <div class="relative">
                             <input type="email" v-model="loginEmail" required placeholder="admin@hospital.com" 
                                    class="w-full pl-3 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-teal-500 focus:bg-white focus:outline-none">
@@ -623,7 +623,7 @@
                         <i class="fa-solid fa-user-gear text-amber-400 text-lg"></i>
                         <div>
                             <h3 class="font-bold text-lg">لوحة إشراف وتعديل مناوبات وترتيب الأطباء</h3>
-                            <p class="text-[11px] text-slate-400">حساب الأدمن الحالي: {{ currentUser.email }}</p>
+                            <p class="text-[11px] text-slate-400">حساب الإدارة الحالي: {{ currentUser.email }}</p>
                         </div>
                     </div>
                     <button @click="showAdminModal = false" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white transition">
@@ -703,7 +703,7 @@
                     <div v-if="adminTab === 'add'" class="bg-white p-6 rounded-2xl border border-slate-200 max-w-2xl mx-auto">
                         <form @submit.prevent="saveDoctorToFirebase" class="space-y-4">
                             <h4 class="font-bold text-slate-900 border-b pb-2 text-sm flex items-center justify-between">
-                                <span>{{ editingDoctorId ? 'تعديل بيانات وطبقات ترتيب الطبيب' : 'إضافة طبيب جديد لـ Firebase' }}</span>
+                                <span>{{ editingDoctorId ? 'تعديل بيانات وطبقات ترتيب الطبيب' : 'إضافة طبيب جديد لقاعدة البيانات' }}</span>
                                 <span v-if="editingDoctorId" class="text-xs font-normal text-amber-600">ID: {{ editingDoctorId }}</span>
                             </h4>
 
@@ -788,7 +788,7 @@
                                 </button>
                                 <button type="submit" class="px-5 py-2 bg-medical-700 hover:bg-medical-800 text-white text-xs font-bold rounded-xl transition shadow flex items-center gap-1.5">
                                     <i class="fa-solid fa-cloud-arrow-up"></i>
-                                    <span>{{ editingDoctorId ? 'تحديث في Firebase' : 'حفظ في Firebase' }}</span>
+                                    <span>{{ editingDoctorId ? 'تحديث في قاعدة البيانات' : 'حفظ في قاعدة البيانات' }}</span>
                                 </button>
                             </div>
                         </form>
@@ -1097,16 +1097,16 @@
                         showLoginModal.value = false;
                         loginEmail.value = '';
                         loginPassword.value = '';
-                        showToast('تم تسجيل دخول الأدمن بنجاح!');
+                        showToast('تم تسجيل دخول الإدارة بنجاح!');
                         showAdminModal.value = true;
                     } catch (err) {
                         console.error('Firebase Auth Login Error:', err);
                         if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-                            loginError.value = 'بيانات الدخول غير صحيحة. يرجى التأكد من البريد وكلمة المرور المسجلة بـ Firebase.';
+                            loginError.value = 'بيانات الدخول غير صحيحة. يرجى التأكد من البريد وكلمة المرور المسجلة بقاعدة البيانات.';
                         } else if (err.code === 'auth/invalid-email') {
                             loginError.value = 'صيغة البريد الإلكتروني غير صحيحة.';
                         } else {
-                            loginError.value = err.message || 'حدث خطأ أثناء الاتصال بـ Firebase Auth.';
+                            loginError.value = err.message || 'حدث خطأ أثناء الاتصال بقاعدة البيانات.';
                         }
                     } finally {
                         isLoggingIn.value = false;
@@ -1118,7 +1118,7 @@
                     try {
                         await auth.signOut();
                         showAdminModal.value = false;
-                        showToast('تم تسجيل خروج الأدمن بنجاح.');
+                        showToast('تم تسجيل خروج الإدارة بنجاح.');
                     } catch (err) {
                         console.error('Sign out error:', err);
                     }
@@ -1208,7 +1208,7 @@
                         showToast(`تم تحديث صور جميع الأطباء (${doctors.value.length}) بنجاح!`);
                     } catch (err) {
                         console.error('Batch avatar update error:', err);
-                        showToast('حدث خطأ أثناء تحديث صور الأطباء في Firebase', 'error');
+                        showToast('حدث خطأ أثناء تحديث صور الأطباء في قاعدة البيانات', 'error');
                     } finally {
                         isUpdatingAvatars.value = false;
                     }
@@ -1348,7 +1348,7 @@
                         adminTab.value = 'manage';
                     } catch (err) {
                         console.error('Firebase save error:', err);
-                        showToast('حدث خطأ أو عدم امتلاك صلاحيات للتعديل بـ Firebase', 'error');
+                        showToast('حدث خطأ أو عدم امتلاك صلاحيات للتعديل بقاعدة البيانات', 'error');
                     }
                 };
 
@@ -1415,7 +1415,7 @@
                     confirmModal.value = {
                         show: true,
                         title: 'إعادة زرع البيانات المبدئية',
-                        message: 'سيتم إضافة مجموعة من البيانات الافتراضية التجريبية بتنسيق الترتيب اليومي لـ Firebase. هل ترغب بالتأكيد؟',
+                        message: 'سيتم إضافة مجموعة من البيانات الافتراضية التجريبية بتنسيق الترتيب اليومي لقاعدة البيانات، هل ترغب بالتأكيد؟',
                         action: seedInitialData
                     };
                 };
