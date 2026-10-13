@@ -171,50 +171,51 @@
                 </div>
 
                 <!-- Database Connection Status & User Authentication Info -->
-                <div class="flex items-center gap-3 text-xs">
+                <div class="flex items-center gap-3 text-xs flex-wrap">
 
-                    <!-- <span v-else class="bg-slate-800 text-slate-400 border border-slate-700 px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1.5">
-                        <i class="fa-solid fa-eye text-slate-400"></i>
-                        <span>وضع المشاهدة</span>
-                    </span> -->
-
+                    <!-- زر تسجيل خروج الأدمن -->
                     <button v-if="isAdminMode"
                         @click="logoutAdmin"
-                        class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-xl text-xs font-bold transition shadow-md flex items-center gap-1.5"
+                        class="bg-red-500 hover:bg-red-600 text-white border border-red-600/60 px-3 py-2 rounded-xl text-xs font-semibold transition shadow-sm flex items-center gap-2"
                         title="تسجيل خروج الأدمن">
                         <i class="fa-solid fa-right-from-bracket"></i>
                         <span>تسجيل الخروج</span>
                     </button>
 
+                    <!-- زر لوحة التحكم / إدارة المناوبات -->
                     <button @click="openAdminModal" 
-                            :class="isAdminMode ? 'bg-amber-500 text-slate-950 shadow-amber-500/20' : 'bg-slate-900 hover:bg-slate-800 text-white shadow-slate-900/20'"
-                            class="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition shadow-md">
+                        :class="isAdminMode ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 border border-amber-600/60 shadow-amber-500/20' : 'bg-slate-900 hover:bg-slate-800 text-white border border-slate-700 shadow-slate-900/20'"
+                        class="px-3 py-2 rounded-xl text-xs font-semibold transition shadow-sm flex items-center gap-2">
                         <i :class="isAdminMode ? 'fa-solid fa-lock-open' : 'fa-solid fa-user-gear'"></i>
                         <span>{{ isAdminMode ? 'لوحة التحكم (نشط)' : 'إدارة المناوبات' }}</span>
                     </button>
 
-                    <span v-if="isAdminMode" class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1.5">
+                    <!-- مؤشر وضع الإدارة -->
+                    <span v-if="isAdminMode" class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2">
                         <i class="fa-solid fa-user-check text-emerald-400"></i>
                         <span>وضع الإدارة</span>
                     </span>
 
-                    <!-- Firebase Connection Indicator -->
+                    <!-- مؤشر اتصال Firebase -->
                     <span :class="isFirebaseConnected ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'"
-                          class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border">
+                        class="px-3 py-2 rounded-xl text-xs font-semibold border flex items-center gap-2">
                         <i :class="isFirebaseConnected ? 'fa-solid fa-cloud text-emerald-400' : 'fa-solid fa-spinner fa-spin text-amber-400'"></i>
                         <span>{{ isFirebaseConnected ? 'متصل' : 'جاري الاتصال...' }}</span>
                     </span>
 
-                    <!-- Seed Data Button (Only for Admin if DB empty) -->
+                    <!-- زرع بيانات تجريبية -->
                     <button v-if="isAdminMode && doctors.length === 0 && !isLoading" 
                             @click="seedInitialData" 
-                            class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold px-3 py-1 rounded-lg transition flex items-center gap-1 shadow-sm">
-                        <i class="fa-solid fa-database"></i> زرع بيانات تجريبية
+                            class="bg-amber-500 hover:bg-amber-600 text-slate-950 border border-amber-600/60 px-3 py-2 rounded-xl text-xs font-semibold transition shadow-sm flex items-center gap-2">
+                        <i class="fa-solid fa-database"></i>
+                        <span>زرع بيانات تجريبية</span>
                     </button>
 
-                    <!-- Print Schedule Button -->
-                    <button @click="printSchedule" class="hover:bg-slate-800 text-slate-300 px-2.5 py-1 rounded-lg transition flex items-center gap-1 font-semibold border border-slate-700">
-                        <i class="fa-solid fa-print"></i> طباعة الجدول
+                    <!-- زر طباعة الجدول -->
+                    <button @click="printSchedule" 
+                            class="bg-slate-900/40 hover:bg-slate-800 text-slate-300 px-3 py-2 rounded-xl text-xs font-semibold transition shadow-sm border border-slate-700 flex items-center gap-2">
+                        <i class="fa-solid fa-print"></i>
+                        <span>طباعة الجدول</span>
                     </button>
                 </div>
             </div>
