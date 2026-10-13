@@ -327,7 +327,7 @@
 
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                     <!-- All Specialties Filter Button -->
-                    <button @click="selectedSpecialty = null"
+                    <button @click="selectSpecialty(null)"
                             :class="selectedSpecialty === null ? 'bg-medical-700 text-white border-medical-700 shadow-md shadow-teal-700/20' : 'bg-white text-slate-700 border-slate-200 hover:border-teal-300 hover:bg-slate-50'"
                             class="p-3.5 rounded-2xl border text-right transition-all flex flex-col justify-between group">
                         <div class="flex items-center justify-between mb-2">
@@ -349,7 +349,7 @@
                     <!-- Dynamic Specialties Sorted by 'order' Field -->
                     <button v-for="spec in sortedSpecialties" 
                             :key="spec.id"
-                            @click="selectedSpecialty = spec.name"
+                            @click="selectSpecialty(spec.name)"
                             :class="selectedSpecialty === spec.name ? 'bg-medical-700 text-white border-medical-700 shadow-md shadow-teal-700/20' : 'bg-white text-slate-700 border-slate-200 hover:border-teal-300 hover:bg-slate-50'"
                             class="p-3.5 rounded-2xl border text-right transition-all flex flex-col justify-between group">
                         <div class="flex items-center justify-between mb-2">
@@ -371,7 +371,7 @@
             </section>
 
             <!-- DOCTORS LIST SECTION -->
-            <section class="mb-12">
+            <section id="doctors-section" class="mb-12">
                 <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
                     <div>
                         <h3 class="text-xl font-bold text-slate-900 flex items-center gap-2">
@@ -1487,6 +1487,16 @@
                     window.print();
                 };
 
+                // أضف هذه الدالة داخل setup()
+                const selectSpecialty = (specName) => {
+                    selectedSpecialty.value = specName;
+                    // التحريك التلقائي بسلاسة إلى قسم الأطباء
+                    const element = document.getElementById('doctors-section');
+                    if (element) {
+                        element.scrollIntoView({ behavior: 'smooth' });
+                    }
+                };
+
                 const exportCSV = () => {
                     let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
                     csvContent += "ترتيب اليوم,اسم الطبيب,التخصص,المسمى الوظيفي,رقم الموبايل,الشيفت,الموقع\n";
@@ -1568,6 +1578,7 @@
                     toast,
                     confirmModal,
                     todaysOnCallCount,
+                    selectSpecialty,
                     filteredDoctors,
                     loginAdmin,
                     logoutAdmin,
