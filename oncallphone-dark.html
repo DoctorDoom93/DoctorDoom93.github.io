@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام الأطباء المناوبين (On-Call) - مستشفى مبرة العصافرة Capital</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        medical: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            200: '#99f6e4',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            700: '#0f766e',
+                            800: '#115e59',
+                            900: '#134e4a',
+                        },
+                        hospital: {
+                            navy: '#0b1329',
+                            blue: '#1e3a8a',
+                            accent: '#0284c7'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Tajawal', 'Cairo', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Google Fonts (Tajawal & Cairo) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.1/css/all.min.css">
+    
+    <!-- Vue 3 CDN -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <!-- Firebase JS SDK -->
+    <script src="https://www.gstatic.com/firebasejs/13.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/13.0.0/firebase-auth-compat.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Tajawal', 'Cairo', sans-serif;
+            background-color: #020617;
+            color: #f1f5f9;
+        }
+        [v-cloak] { display: none !important; }
+        
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        .smooth-image {
+            image-rendering: smooth;
+            image-rendering: -webkit-optimize-contrast;
+            transform: translateZ(0);
+            backface-visibility: hidden;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;  
+            scrollbar-width: none;  
+        }
+
+        @keyframes custom-ping {
+            75%, 100% {
+                transform: scale(2);
+                opacity: 0;
+            }
+        }
+        .animate-custom-ping {
+            animation: custom-ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+
+        @media print {
+            html, body, #app {
+                height: auto !important;
+                min-height: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+                overflow: visible !important;
+            }
+
+            .no-print, header, main, footer, .fixed, .sticky {
+                display: none !important;
+            }
+
+            .print-only {
+                display: block !important;
+                position: static !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                visibility: visible !important;
+            }
+
+            .print-only * {
+                visibility: visible !important;
+            }
+
+            .print-footer-fixed {
+                position: fixed !important;
+                bottom: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                width: 100% !important;
+                background: white !important;
+            }
+
+            .print-only table {
+                margin-bottom: 10mm !important;
+            }
+
+            .break-inside-avoid {
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+            }
+
+            @page {
+                size: A4 portrait;
+                margin: 10mm;
+            }
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col text-slate-100 antialiased selection:bg-teal-500 selection:text-white overflow-hidden bg-slate-950">
+
+    <div id="app" v-cloak class="h-full flex flex-col overflow-hidden">
+        
+        <!-- STICKY TOP CONTAINER (Emergency Bar + Header) -->
+        <div class="sticky top-0 z-40 shadow-md no-print">
+            <!-- TOP EMERGENCY & DATABASE STATUS BAR -->
+            <div class="bg-slate-950 text-white text-xs py-2 px-4 border-b border-slate-800/80">
+                <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-3">
+                    
+                    <!-- Emergency Hotline Info -->
+                    <div class="flex items-center gap-2">
+                        <span class="inline-block w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
+                        <span><i class="fa-solid fa-triangle-exclamation text-amber-400 ml-1"></i> Code Blue: <strong class="underline font-bold text-yellow-300">3444</strong> | السويتش: <strong class="font-bold text-yellow-300">9</strong></span>
+                    </div>
+
+                </div>
+            </div>
+
+            <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 shadow-lg">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex justify-between items-center h-20">
+                        
+                        <div class="flex items-center gap-3 cursor-pointer" @click="resetFilters">
+                            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-teal-700 to-teal-500 flex items-center justify-center text-white shadow-lg shadow-teal-500/20 overflow-hidden">
+                                <img src="https://raw.githubusercontent.com/DoctorDoom93/DoctorDoom93.github.io/refs/heads/main/images/logo.png" alt="Logo" class="w-full h-full object-cover smooth-image">
+                            </div>
+                            <div>
+                                <h1 class="text-xl font-extrabold text-white tracking-tight leading-none">مستشفى مبرة العصافرة Capital</h1>
+                                <p class="text-xs text-teal-400 font-semibold mt-1 flex items-center gap-1.5">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span>
+                                    نظام دليل الأطباء المناوبين (Live On-Call)
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-3">
+                            <div class="hidden sm:flex items-center gap-4 bg-slate-950/60 border border-slate-800 rounded-2xl px-3.5 py-2 text-xs font-medium">
+                                <div class="text-center border-l border-slate-800 pl-3">
+                                    <span class="block text-slate-400">إجمالي الأطباء</span>
+                                    <span class="font-bold text-slate-100 text-sm">{{ doctors.length }}</span>
+                                </div>
+                                <div class="text-center">
+                                    <span class="block text-slate-400">مناوبون اليوم</span>
+                                    <span class="font-bold text-emerald-400 text-sm">{{ todaysOnCallCount }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+            </header>
+        </div>
+        
+        <main class="flex-1 overflow-y-auto max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 no-scrollbar">            
+            <!-- HERO SEARCH & ANNOUNCEMENT BANNER -->
+            <section class="mb-6 no-print">
+                <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-teal-950 rounded-3xl p-6 md:p-8 text-white shadow-2xl relative overflow-hidden border border-slate-800">
+                    <div class="absolute -left-10 -bottom-10 w-48 h-48 bg-teal-500/10 rounded-full blur-2xl"></div>
+                    
+                    <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+                        <div class="w-full md:w-auto flex justify-center antialiased md:justify-end">
+                            <img src="https://raw.githubusercontent.com/DoctorDoom93/DoctorDoom93.github.io/refs/heads/main/images/logo.png" 
+                                 alt="صورة الشعار" 
+                                 class="w-full max-w-[280px] md:max-w-[340px] object-cover rounded-3xl shadow-2xl border border-slate-700/50">
+                        </div>
+                        
+                        <div class="w-full md:max-w-xl lg:max-w-2xl">
+                            <h2 class="text-2xl md:text-3xl font-extrabold mb-2 leading-snug text-slate-100">ابحث عن الطبيب المناوب حسب أولوية الاستدعاء اليومية</h2>
+                            <p class="text-slate-300 text-sm md:text-base mb-6 leading-relaxed">
+                                اختر اليوم والتخصص المطلوب لعرض الأطباء المناوبين مرتبين بحسب أولوية الاستدعاء اليومية المحددة.
+                            </p>
+
+                            <!-- Search Box Input -->
+                            <div class="relative">
+                                <div class="absolute inset-y-0 right-0 pl-3 pr-4 flex items-center pointer-events-none text-slate-400">
+                                    <i class="fa-solid fa-magnifying-glass text-lg"></i>
+                                </div>
+                                <input type="text" 
+                                       v-model="searchQuery" 
+                                       placeholder="ابحث باسم الطبيب، التخصص، أو رقم الموبايل..." 
+                                       class="w-full pr-12 pl-12 py-3.5 bg-slate-950/80 text-slate-100 rounded-2xl border border-slate-700/80 shadow-inner text-sm sm:text-base focus:ring-2 focus:ring-teal-500 focus:border-teal-500 focus:outline-none placeholder:text-slate-500">
+                                <button v-if="searchQuery" 
+                                        @click="searchQuery = ''" 
+                                        class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400 hover:text-slate-200">
+                                    <i class="fa-solid fa-xmark text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="mb-8 no-print">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
+                        <i class="fa-regular fa-calendar-check text-teal-400"></i>
+                        جدول أيام الأسبوع للمناوبة
+                    </h3>
+                    <span class="text-xs font-semibold text-slate-400">اليوم المحدد: <strong class="text-teal-400">{{ getDayName(selectedDayId) }}</strong></span>
+                </div>
+
+                <!-- Days Pills Grid -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
+                    <button v-for="day in daysOfWeek" 
+                            :key="day.id"
+                            @click="selectedDayId = day.id"
+                            :class="[
+                                selectedDayId === day.id 
+                                    ? 'bg-teal-600 text-white shadow-lg shadow-teal-900/40 border-teal-500' 
+                                    : 'bg-slate-900/80 text-slate-300 hover:bg-slate-800 border-slate-800',
+                                currentDayId === day.id ? 'ring-2 ring-amber-400/80 border-amber-400/80' : ''
+                            ]"
+                            class="p-3 rounded-2xl border transition flex flex-col items-center justify-center gap-1 relative overflow-hidden group">
+                        
+                        <span v-if="currentDayId === day.id" 
+                              class="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-amber-400 shadow-sm" 
+                              title="اليوم الحالي"></span>
+
+                        <span class="text-xs font-bold">{{ day.name }}</span>
+                        <span class="text-[10px] opacity-90 font-semibold px-2 py-0.5 rounded-full"
+                              :class="selectedDayId === day.id ? 'bg-teal-950/60 text-teal-200' : 'bg-slate-950 text-slate-400'">
+                            {{ getOnCallCountForDay(day.id) }} مناوب
+                        </span>
+                    </button>
+                </div>
+            </section>
+
+            <section class="mb-8 no-print">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+                        <i class="fa-solid fa-layer-group text-teal-400"></i>
+                        التخصصات الطبية المتوفرة
+                    </h3>
+                    <button v-if="selectedSpecialty" 
+                            @click="selectedSpecialty = null" 
+                            class="text-xs font-bold text-teal-300 hover:text-teal-200 bg-teal-950/60 hover:bg-teal-900/60 border border-teal-800/80 px-3 py-1.5 rounded-xl transition flex items-center gap-1">
+                        <i class="fa-solid fa-arrow-rotate-right"></i> عرض كافة التخصصات
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                    <button @click="selectSpecialty(null)"
+                            :class="selectedSpecialty === null ? 'bg-teal-700/80 text-white border-teal-500 shadow-lg shadow-teal-900/30' : 'bg-slate-900/80 text-slate-300 border-slate-800 hover:border-slate-700 hover:bg-slate-800/80'"
+                            class="p-3.5 rounded-2xl border text-right transition-all flex flex-col justify-between group">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="w-9 h-9 rounded-xl flex items-center justify-center text-base"
+                                  :class="selectedSpecialty === null ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400 group-hover:bg-teal-900/50 group-hover:text-teal-300'">
+                                <i class="fa-solid fa-border-all"></i>
+                            </span>
+                            <span :class="selectedSpecialty === null ? 'bg-black/30 text-white' : 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/50'"
+                                  class="text-[11px] font-bold px-2 py-0.5 rounded-full">
+                                {{ getOnCallCountForDay(selectedDayId) }} مناوب
+                            </span>
+                        </div>
+                        <div>
+                            <p class="font-bold text-sm">كافة التخصصات</p>
+                            <p class="text-xs text-slate-400 mt-0.5">{{ doctors.length }} طبيب مسجل</p>
+                        </div>
+                    </button>
+
+                    <button v-for="spec in sortedSpecialties" 
+                            :key="spec.id"
+                            @click="selectSpecialty(spec.name)"
+                            :class="selectedSpecialty === spec.name ? 'bg-teal-700/80 text-white border-teal-500 shadow-lg shadow-teal-900/30' : 'bg-slate-900/80 text-slate-300 border-slate-800 hover:border-slate-700 hover:bg-slate-800/80'"
+                            class="p-3.5 rounded-2xl border text-right transition-all flex flex-col justify-between group">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="w-9 h-9 rounded-xl flex items-center justify-center text-base"
+                                  :class="selectedSpecialty === spec.name ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400 group-hover:bg-teal-900/50 group-hover:text-teal-300'">
+                                <i :class="spec.icon || 'fa-solid fa-stethoscope'"></i>
+                            </span>
+                            <span :class="getOnCallCountForSpecialtyAndDay(spec.name, selectedDayId) > 0 ? (selectedSpecialty === spec.name ? 'bg-black/30 text-white' : 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/50') : 'bg-slate-800 text-slate-500'"
+                                  class="text-[11px] font-bold px-2 py-0.5 rounded-full">
+                                {{ getOnCallCountForSpecialtyAndDay(spec.name, selectedDayId) }} مناوب
+                            </span>
+                        </div>
+                        <div>
+                            <p class="font-bold text-sm truncate">{{ spec.name }}</p>
+                            <p class="text-xs text-slate-400 mt-0.5">{{ getDoctorTotalForSpecialty(spec.name) }} طبيب</p>
+                        </div>
+                    </button>
+                </div>
+            </section>
+
+            <section id="doctors-section" class="mb-12">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-100 flex items-center gap-2">
+                            <i class="fa-solid fa-user-doctor text-teal-400"></i>
+                            <span>قائمة الأطباء - يوم ({{ getDayName(selectedDayId) }})</span>
+                            <span v-if="selectedSpecialty" class="text-xs font-semibold text-teal-300 bg-teal-950/80 border border-teal-800 px-2.5 py-0.5 rounded-lg">
+                                تخصص: {{ selectedSpecialty }}
+                            </span>
+                        </h3>
+                        <p class="text-xs text-slate-400 mt-1">يتم ترتيب الأطباء بحسب المناوبة أولاً، ثم ترتيب أولوية الاستدعاء (#1، #2، #3...).</p>
+                    </div>
+
+                    <div class="flex items-center gap-2 bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs font-bold no-print">
+                        <button @click="statusFilter = 'oncall'" 
+                                :class="statusFilter === 'oncall' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'"
+                                class="px-3 py-1.5 rounded-lg transition">
+                            المناوبون فقط ({{ filteredDoctors.filter(d => isDoctorOnCallOnDay(d, selectedDayId)).length }})
+                        </button>
+                        <button @click="statusFilter = 'all'" 
+                                :class="statusFilter === 'all' ? 'bg-slate-800 text-slate-200 shadow-sm' : 'text-slate-400 hover:text-slate-200'"
+                                class="px-3 py-1.5 rounded-lg transition">
+                            الكل
+                        </button>
+                    </div>
+                </div>
+
+                <div v-if="isLoading" class="py-16 text-center">
+                    <div class="inline-block w-10 h-10 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mb-3"></div>
+                    <p class="text-sm font-bold text-slate-400">جاري تحميل بيانات الأطباء من قاعدة البيانات...</p>
+                </div>
+
+                <div v-else-if="filteredDoctors.length === 0" class="bg-slate-900/80 border border-slate-800 rounded-3xl p-12 text-center max-w-md mx-auto my-8 shadow-md">
+                    <div class="w-16 h-16 bg-slate-800 text-slate-500 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                        <i class="fa-solid fa-user-slash"></i>
+                    </div>
+                    <h4 class="text-base font-bold text-slate-200">لا يوجد أطباء مطابقون</h4>
+                    <p class="text-xs text-slate-400 mt-1 mb-4">لا يوجد أطباء مسجلون في هذا اليوم أو بهذا التخصص.</p>
+                </div>
+
+                <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <div v-for="doctor in filteredDoctors" 
+                         :key="doctor.id"
+                         :class="isDoctorOnCallOnDay(doctor, selectedDayId) ? 'border-teal-500/60 bg-slate-900/90 shadow-lg shadow-teal-950/30' : 'border-slate-800/80 bg-slate-900/40 opacity-75'"
+                         class="rounded-2xl border p-5 flex flex-col justify-between transition hover:shadow-2xl hover:border-teal-500/80 relative overflow-hidden group">
+                        
+                        <div>
+                            <div class="flex items-start justify-between gap-3 mb-3">
+                                <div class="flex items-center gap-3">
+                                    <div class="relative shrink-0">
+                                        <img :src="doctor.avatar || 'https://placehold.co/120x120/0d9488/ffffff?text=Doctor'" 
+                                             :alt="doctor.name"
+                                             class="w-14 h-14 rounded-2xl object-cover border-2 border-slate-700 shadow-sm">
+                                        
+                                        <span v-if="isDoctorOnCallOnDay(doctor, selectedDayId)" 
+                                              class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-slate-900 animate-pulse"
+                                              title="مناوب اليوم"></span>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-slate-100 text-base leading-snug group-hover:text-teal-300 transition">
+                                            {{ doctor.name }}
+                                        </h4>
+                                        <p class="text-xs font-semibold text-teal-400 mt-0.5">
+                                            <i class="fa-solid fa-stethoscope text-[10px] ml-0.5"></i> {{ doctor.specialty }}
+                                        </p>
+                                        <span class="inline-block text-[11px] text-slate-400 mt-0.5 font-medium">
+                                            {{ doctor.title }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <span :class="isDoctorOnCallOnDay(doctor, selectedDayId) ? 'bg-emerald-950/80 text-emerald-400 border-emerald-800/80' : 'bg-slate-800 text-slate-400 border-slate-700'"
+                                      class="text-[11px] font-bold px-2.5 py-1 rounded-xl border flex items-center gap-1 shrink-0">
+                                    <i :class="isDoctorOnCallOnDay(doctor, selectedDayId) ? 'fa-solid fa-circle text-emerald-400 text-[8px]' : 'fa-solid fa-circle text-slate-500 text-[8px]'"></i>
+                                    {{ isDoctorOnCallOnDay(doctor, selectedDayId) ? 'مناوب اليوم' : 'غير مناوب' }}
+                                </span>
+                            </div>
+
+                            <div v-if="isDoctorOnCallOnDay(doctor, selectedDayId)" 
+                                 class="flex items-center justify-between bg-amber-950/40 border border-amber-800/50 rounded-xl px-3 py-1.5 text-xs font-bold text-amber-200 mb-3">
+                                <span class="flex items-center gap-1.5">
+                                    <i class="fa-solid fa-arrow-down-1-9 text-amber-400"></i>
+                                    <span>ترتيب الاستدعاء ({{ getDayName(selectedDayId) }}):</span>
+                                </span>
+                                <span class="bg-amber-500 text-slate-950 px-2 py-0.5 rounded-lg text-xs font-black shadow-xs">
+                                    الطبيب رقم #{{ getDoctorRankForDay(doctor, selectedDayId) }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2 bg-slate-950/80 rounded-xl p-3 border border-slate-800/80 text-xs mb-4">
+                            <div class="flex items-center justify-between text-slate-400">
+                                <span><i class="fa-regular fa-clock text-teal-400 ml-1"></i> مواعيد الشيفت:</span>
+                                <span class="font-bold text-slate-200" dir="ltr">{{ doctor.shiftHours }}</span>
+                            </div>
+                            <div class="flex items-center justify-between text-slate-400">
+                                <span><i class="fa-solid fa-location-dot text-teal-400 ml-1"></i> الموقع بالمستشفى:</span>
+                                <span class="font-bold text-slate-200">{{ doctor.location || 'المبنى الرئيسي' }}</span>
+                            </div>
+                        </div>
+
+                        <div class="pt-2 border-t border-slate-800 flex items-center gap-2">
+                            <a :href="'tel:' + doctor.phone" 
+                               :class="isDoctorOnCallOnDay(doctor, selectedDayId) ? 'bg-emerald-600 hover:bg-emerald-500 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-200'"
+                               class="flex-1 py-2 px-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition active:scale-95 border border-slate-700/50">
+                               <span class="text-[10px] opacity-80" dir="ltr">({{ doctor.phone }})</span> 
+                               <span>اتصال</span>
+                               <i class="fa-solid fa-phone"></i>
+                            </a>
+
+                            <a :href="'https://wa.me/+2' + doctor.phone" 
+                               target="_blank"
+                               class="py-2 px-2.5 rounded-xl font-bold text-xs bg-emerald-800 hover:bg-emerald-700 text-white flex items-center justify-center gap-1.5 transition active:scale-95 border border-emerald-700/50">
+                               <span>WhatsApp</span> 
+                               <i class="fa-brands fa-whatsapp"></i>
+                            </a>
+
+                            <button @click="copyPhone(doctor.phone)" 
+                                    title="نسخ رقم الموبايل"
+                                    class="w-9 h-9 rounded-xl border border-slate-800 hover:border-teal-500/80 hover:bg-slate-800 text-slate-300 flex items-center justify-center transition active:scale-95">
+                                <i class="fa-regular fa-copy"></i>
+                            </button>
+
+                            <button v-if="isAdminMode" 
+                                    @click="editDoctor(doctor)" 
+                                    title="تعديل بيانات الطبيب وترتيبه"
+                                    class="w-9 h-9 rounded-xl bg-amber-950/60 text-amber-400 border border-amber-800/60 hover:bg-amber-900/80 font-bold flex items-center justify-center transition">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+
+        <!-- ADMIN MANAGEMENT MODAL -->
+        <div v-if="showAdminModal && isAdminMode" class="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 no-print">
+            <div class="bg-slate-900 rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-slate-800">
+                
+                <div class="px-6 py-4 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-user-gear text-amber-400 text-lg"></i>
+                        <div>
+                            <h3 class="font-bold text-lg">لوحة إشراف وتعديل مناوبات وترتيب الأطباء</h3>
+                            <p class="text-[11px] text-slate-400">حساب الإدارة الحالي: {{ currentUser.email }}</p>
+                        </div>
+                    </div>
+                    <button @click="showAdminModal = false" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <div class="flex border-b border-slate-800 bg-slate-950/50 px-6 pt-3 gap-2 text-xs font-bold">
+                    <button @click="adminTab = 'manage'" 
+                            :class="adminTab === 'manage' ? 'bg-slate-900 text-teal-400 border-t-2 border-teal-500 shadow-sm' : 'text-slate-400 hover:text-slate-200'"
+                            class="px-4 py-2.5 rounded-t-xl transition">
+                        <i class="fa-solid fa-sliders ml-1"></i> إدارة الكادر والجدول
+                    </button>
+                    <button @click="adminTab = 'add'" 
+                            :class="adminTab === 'add' ? 'bg-slate-900 text-teal-400 border-t-2 border-teal-500 shadow-sm' : 'text-slate-400 hover:text-slate-200'"
+                            class="px-4 py-2.5 rounded-t-xl transition">
+                        <i class="fa-solid fa-user-plus ml-1"></i> {{ editingDoctorId ? 'تعديل بيانات وطبقات الترتيب' : 'إضافة طبيب جديد' }}
+                    </button>
+                    <button @click="adminTab = 'specialties'" 
+                            :class="adminTab === 'specialties' ? 'bg-slate-900 text-teal-400 border-t-2 border-teal-500 shadow-sm' : 'text-slate-400 hover:text-slate-200'"
+                            class="px-4 py-2.5 rounded-t-xl transition">
+                        <i class="fa-solid fa-tags ml-1"></i> إدارة التخصصات والترتيب
+                    </button>
+                </div>
+
+                <div class="p-6 overflow-y-auto flex-1 bg-slate-900/60">
+                    
+                    <!-- TAB 1: MANAGE DOCTORS LIST -->
+                    <div v-if="adminTab === 'manage'" class="space-y-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <p class="text-xs text-slate-400 font-semibold">قائمة الأطباء والترتيب المحدد لكل يوم:</p>
+                            <div class="flex items-center gap-2">
+                                <button @click="updateAllDoctorAvatars" 
+                                        :disabled="isUpdatingAvatars"
+                                        :class="isUpdatingAvatars ? 'bg-amber-950/60 text-amber-400 border-amber-800' : 'bg-teal-950/60 hover:bg-teal-900/80 text-teal-300 border-teal-800/80'"
+                                        class="text-xs font-bold border px-3 py-1 rounded-lg transition flex items-center gap-1 disabled:opacity-60 disabled:cursor-not-allowed">
+                                    <i v-if="isUpdatingAvatars" class="fa-solid fa-circle-notch fa-spin"></i>
+                                    <i v-else class="fa-solid fa-image"></i>
+                                    {{ isUpdatingAvatars ? 'جاري التحديث...' : 'تحديث كافة الصور' }}
+                                </button>
+                                <button @click="exportCSV" class="text-xs font-bold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1 rounded-lg transition flex items-center gap-1">
+                                    <i class="fa-solid fa-file-csv"></i> تصدير CSV
+                                </button>
+                                <span class="text-xs font-bold text-emerald-400 bg-emerald-950/60 px-2.5 py-1 rounded-lg border border-emerald-800/60">
+                                    {{ doctors.length }} طبيب مسجل
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-950/80 rounded-2xl border border-slate-800 divide-y divide-slate-800/80 overflow-hidden">
+                            <div v-for="doc in doctors" :key="doc.id" class="p-3.5 flex items-center justify-between hover:bg-slate-900 transition">
+                                <div class="flex items-center gap-3">
+                                    <img :src="doc.avatar || 'https://placehold.co/100'" class="w-10 h-10 rounded-xl object-cover border border-slate-700">
+                                    <div>
+                                        <p class="font-bold text-sm text-slate-200">{{ doc.name }}</p>
+                                        <p class="text-xs text-slate-400">
+                                            {{ doc.specialty }} | المناوبات والترتيب: <span class="font-bold text-teal-400">{{ getDoctorDaysFormatted(doc) }}</span>
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center gap-2">
+                                    <button @click="editDoctor(doc)" class="text-xs text-slate-300 hover:text-teal-300 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-700 transition">
+                                        <i class="fa-solid fa-pen-to-square ml-1"></i> تعديل الترتيب
+                                    </button>
+                                    <button @click="confirmDeleteDoctor(doc)" class="text-xs text-red-400 hover:text-red-300 bg-red-950/60 hover:bg-red-900/80 px-3 py-1.5 rounded-lg border border-red-800/80 transition">
+                                        <i class="fa-solid fa-trash ml-1"></i> حذف
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: ADD / EDIT DOCTOR FORM -->
+                    <div v-if="adminTab === 'add'" class="bg-slate-950/80 p-6 rounded-2xl border border-slate-800 max-w-2xl mx-auto">
+                        <form @submit.prevent="saveDoctorToFirebase" class="space-y-4">
+                            <h4 class="font-bold text-slate-200 border-b border-slate-800 pb-2 text-sm flex items-center justify-between">
+                                <span>{{ editingDoctorId ? 'تعديل بيانات وطبقات ترتيب الطبيب' : 'إضافة طبيب جديد لقاعدة البيانات' }}</span>
+                                <span v-if="editingDoctorId" class="text-xs font-normal text-amber-400">ID: {{ editingDoctorId }}</span>
+                            </h4>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">اسم الطبيب الكامل *</label>
+                                    <input type="text" v-model="doctorForm.name" required placeholder="د. محمد المنصوري" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 text-white rounded-xl text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">التخصص *</label>
+                                    <select v-model="doctorForm.specialty" required class="w-full px-3 py-2 bg-slate-900 border border-slate-800 text-white rounded-xl text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                                        <option value="" disabled>اختر التخصص</option>
+                                        <option v-for="spec in sortedSpecialties" :key="spec.id" :value="spec.name">{{ spec.name }}</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">المسمى الوظيفي *</label>
+                                    <input type="text" v-model="doctorForm.title" required placeholder="استشاري جراحة / أخصائي أول" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 text-white rounded-xl text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">رقم الموبايل *</label>
+                                    <input type="text" v-model="doctorForm.phone" required placeholder="01234567890" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 text-white rounded-xl text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none" dir="ltr">
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">ساعات الشيفت *</label>
+                                    <input type="text" v-model="doctorForm.shiftHours" required placeholder="08:00 AM - 07:59 AM" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 text-white rounded-xl text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none" dir="ltr">
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-300 mb-1">الموقع داخل المستشفى</label>
+                                    <input type="text" v-model="doctorForm.location" placeholder="طوارئ البرج A - الدور الأول" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 text-white rounded-xl text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                                </div>
+                            </div>
+
+                            <div class="pt-3 border-t border-slate-800">
+                                <div class="mb-2">
+                                    <label class="block text-xs font-bold text-slate-200">
+                                        <i class="fa-solid fa-list-ol text-teal-400 ml-1"></i>
+                                        تحديد أيام المناوبة وترتيب الاستدعاء (Rank) لكل يوم:
+                                    </label>
+                                    <p class="text-[11px] text-slate-400">اختر اليوم وضع رقم ترتيب الاستدعاء (1 للـ الأول، 2 للـ الثاني...):</p>
+                                </div>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                                    <div v-for="day in daysOfWeek" 
+                                         :key="day.id" 
+                                         :class="doctorForm.days.includes(day.id) ? 'bg-teal-950/60 border-teal-600/80' : 'bg-slate-900 border-slate-800'"
+                                         class="p-2.5 border rounded-xl flex items-center justify-between transition">
+                                        
+                                        <label class="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-200 select-none">
+                                            <input type="checkbox" 
+                                                   :value="day.id" 
+                                                   v-model="doctorForm.days" 
+                                                   @change="handleDayToggle(day.id)"
+                                                   class="rounded bg-slate-800 text-teal-500 focus:ring-teal-500 border-slate-700">
+                                            <span>{{ day.name }}</span>
+                                        </label>
+
+                                        <div v-if="doctorForm.days.includes(day.id)" class="flex items-center gap-1">
+                                            <span class="text-[10px] text-slate-400 font-semibold">ترتيب:</span>
+                                            <input type="number" 
+                                                   min="1" 
+                                                   max="99" 
+                                                   v-model.number="doctorForm.dayRanks[day.id]" 
+                                                   class="w-14 px-1.5 py-1 text-center font-black text-xs border border-teal-500/80 rounded-lg focus:ring-2 focus:ring-teal-500 bg-slate-900 text-teal-300" 
+                                                   title="ترتيب الطبيب في الاستدعاء لهذا اليوم">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-end gap-2 pt-4 border-t border-slate-800">
+                                <button type="button" v-if="editingDoctorId" @click="resetDoctorForm" class="px-4 py-2 border border-slate-700 rounded-xl text-xs font-bold text-slate-400 hover:bg-slate-800 hover:text-white">
+                                    إلغاء التعديل
+                                </button>
+                                <button type="submit" class="px-5 py-2 bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold rounded-xl transition shadow-lg shadow-teal-950 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                                    <span>{{ editingDoctorId ? 'تحديث في قاعدة البيانات' : 'حفظ في قاعدة البيانات' }}</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- TAB 3: SPECIALTIES MANAGEMENT -->
+                    <div v-if="adminTab === 'specialties'" class="space-y-4 max-w-2xl mx-auto">
+                        <div class="bg-slate-950/80 p-4 rounded-2xl border border-slate-800">
+                            <form @submit.prevent="addSpecialtyToFirebase" class="flex flex-wrap sm:flex-nowrap gap-2">
+                                <input type="text" v-model="newSpecialtyName" required placeholder="اسم التخصص (مثال: جراحة العيون)" class="flex-1 px-3 py-2 bg-slate-900 border border-slate-800 text-white rounded-xl text-xs focus:ring-2 focus:ring-teal-500">
+                                <input type="number" v-model.number="newSpecialtyOrder" min="1" placeholder="ترتيب العرض" class="w-28 px-3 py-2 bg-slate-900 border border-slate-800 text-white rounded-xl text-xs focus:ring-2 focus:ring-teal-500">
+                                <button type="submit" class="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold rounded-xl transition">
+                                    إضافة تخصص
+                                </button>
+                            </form>
+                        </div>
+
+                        <div class="bg-slate-950/80 rounded-2xl border border-slate-800 divide-y divide-slate-800">
+                            <div v-for="spec in sortedSpecialties" :key="spec.id" class="p-3 flex items-center justify-between text-xs">
+                                <div class="flex items-center gap-3">
+                                    <span class="w-6 h-6 rounded-lg bg-teal-950 text-teal-400 border border-teal-800 font-bold flex items-center justify-center text-[11px]">
+                                        {{ spec.order || '-' }}
+                                    </span>
+                                    <div class="flex items-center gap-2">
+                                        <i :class="spec.icon || 'fa-solid fa-user-doctor'" class="text-teal-400 text-sm"></i>
+                                        <span class="font-bold text-slate-200">{{ spec.name }}</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <label class="text-[10px] text-slate-400">تعديل الترتيب:</label>
+                                    <input type="number" 
+                                           :value="spec.order" 
+                                           @change="updateSpecialtyOrder(spec.id, $event.target.value)"
+                                           class="w-16 px-2 py-1 bg-slate-900 border border-slate-800 rounded-lg text-center text-xs font-bold text-teal-300 focus:ring-2 focus:ring-teal-500">
+                                    <span class="text-slate-400 font-medium text-[11px] mr-2">{{ getDoctorTotalForSpecialty(spec.name) }} طبيب</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="px-6 py-3 bg-slate-950 border-t border-slate-800 flex items-center justify-between text-xs">
+                    <button @click="confirmSeedInitialData" class="text-amber-400 hover:underline font-bold flex items-center gap-1">
+                        <i class="fa-solid fa-arrows-rotate"></i> إعادة زرع البيانات المبدئية الافتراضية
+                    </button>
+                    <button @click="showAdminModal = false" class="px-4 py-2 bg-slate-800 text-slate-200 font-bold rounded-xl hover:bg-slate-700 transition border border-slate-700">
+                        إغلاق اللوحة
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- CUSTOM CONFIRMATION MODAL -->
+        <div v-if="confirmModal.show" class="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 no-print">
+            <div class="bg-slate-900 rounded-3xl p-6 max-w-md w-full text-center shadow-2xl border border-slate-800">
+                <div class="w-14 h-14 bg-red-950/80 text-red-400 border border-red-800 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <h3 class="text-lg font-bold text-white mb-2">{{ confirmModal.title }}</h3>
+                <p class="text-xs text-slate-400 mb-6 leading-relaxed">{{ confirmModal.message }}</p>
+                <div class="flex items-center justify-center gap-3">
+                    <button @click="confirmModal.show = false" class="flex-1 py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition border border-slate-700">
+                        إلغاء
+                    </button>
+                    <button @click="executeConfirmAction" class="flex-1 py-2.5 px-4 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-xs transition shadow-md">
+                        تأكيد التنفيذ
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TOAST NOTIFICATION -->
+        <div v-if="toast.show" 
+             :class="toast.type === 'error' ? 'bg-red-950 border-red-700 text-red-200' : 'bg-slate-900 border-slate-700 text-white'"
+             class="fixed bottom-5 left-5 z-50 px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border animate-bounce no-print">
+            <span :class="toast.type === 'error' ? 'bg-red-900/60 text-red-400' : 'bg-emerald-900/60 text-emerald-400'"
+                  class="w-8 h-8 rounded-xl flex items-center justify-center">
+                <i :class="toast.type === 'error' ? 'fa-solid fa-xmark' : 'fa-solid fa-check'"></i>
+            </span>
+            <p class="text-xs font-bold">{{ toast.message }}</p>
+        </div>
+
+        <div class="hidden print-only relative min-h-screen">
+            <table class="w-full">
+                <thead>
+                    <tr>
+                        <td>
+                            <div class="text-center border-b-4 border-slate-900 pb-1 mb-2.5">
+                                <h1 class="text-2xl font-bold text-slate-900">مستشفى مبرة العصافرة Capital</h1>
+                                <p class="text-sm text-slate-600 font-semibold mt-1">
+                                    جدول الأطباء المناوبين (On-Call Schedule) - يوم {{ getDayName(selectedDayId) }} 
+                                </p>
+                                <div class="h-4"></div>
+                            </div>
+                        </td>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    <tr>
+                        <td>
+                            <div class="space-y-5 pb-6">
+                                <template v-for="spec in sortedSpecialties" :key="spec.id">
+                                    <div v-if="doctors.filter(d => d.specialty === spec.name && isDoctorOnCallOnDay(d, selectedDayId)).length > 0" 
+                                        class="break-inside-avoid">
+                                        
+                                        <div class="flex items-center gap-2 border-b-2 border-slate-900 pb-1 mb-2.5">
+                                            <i :class="spec.icon || 'fa-solid fa-stethoscope'" class="text-sm text-slate-900"></i>
+                                            <h3 class="text-sm font-extrabold text-slate-900">{{ spec.name }}</h3>
+                                            <span class="text-xs text-slate-600 font-bold mr-auto">
+                                                (عدد المناوبين: {{ doctors.filter(d => d.specialty === spec.name && isDoctorOnCallOnDay(d, selectedDayId)).length }})
+                                            </span>
+                                        </div>
+
+                                        <div class="grid grid-cols-2 gap-3">
+                                            <div v-for="doc in doctors
+                                                            .filter(d => d.specialty === spec.name && isDoctorOnCallOnDay(d, selectedDayId))
+                                                            .sort((a, b) => getDoctorRankForDay(a, selectedDayId) - getDoctorRankForDay(b, selectedDayId))" 
+                                                :key="doc.id" 
+                                                class="border-2 border-slate-300 rounded-lg p-3 bg-white text-xs flex flex-col justify-between break-inside-avoid">
+                                                
+                                                <div>
+                                                    <div class="border-b border-slate-200 pb-1.5 mb-1.5">
+                                                        <h4 class="font-extrabold text-sm text-slate-900 leading-tight">{{ doc.name }}</h4>
+                                                        <p class="text-[11px] font-semibold text-slate-600 mt-0.5">{{ doc.title }}</p>
+                                                    </div>
+
+                                                    <div class="bg-slate-100 border border-slate-300 rounded px-2 py-1 mb-2 flex items-center justify-between font-bold text-slate-800">
+                                                        <span><i class="fa-solid fa-list-ol text-teal-700 ml-1"></i> ترتيب الاستدعاء:</span>
+                                                        <span class="bg-slate-900 text-white px-2 py-0.5 rounded text-xs font-black">
+                                                            الطبيب رقم #{{ getDoctorRankForDay(doc, selectedDayId) }}
+                                                        </span>
+                                                    </div>
+
+                                                    <div class="space-y-0.5 text-[11px] text-slate-800">
+                                                        <div class="flex justify-between">
+                                                            <span class="text-slate-500 font-medium">الهاتف:</span>
+                                                            <span class="font-bold" dir="ltr">{{ doc.phone }}</span>
+                                                        </div>
+                                                        <div class="flex justify-between">
+                                                            <span class="text-slate-500 font-medium">المواعيد:</span>
+                                                            <span class="font-bold" dir="ltr">{{ doc.shiftHours }}</span>
+                                                        </div>
+                                                        <div class="flex justify-between">
+                                                            <span class="text-slate-500 font-medium">الموقع:</span>
+                                                            <span class="font-bold">{{ doc.location || 'المبنى الرئيسي' }}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </template>
+                            </div>
+
+                            <div v-if="doctors.filter(d => isDoctorOnCallOnDay(d, selectedDayId)).length === 0" 
+                                class="text-center py-8 border border-dashed border-slate-300 rounded-xl text-slate-500 text-xs font-bold">
+                                لا يوجد أطباء مناوبون مسجلون في هذا اليوم.
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="print-footer-fixed border-t-2 border-slate-900 pt-1.5 text-[11px] font-bold text-slate-800 bg-white">
+                <div class="flex flex-wrap justify-between items-center gap-2 bg-slate-100 p-2 rounded-lg border border-slate-300">
+                    <span>المدير الطبي: <strong class="text-slate-900">3617</strong></span>
+                    <span>|</span>
+                    <span>نائب المدير الطبي: <strong class="text-slate-900">3067</strong></span>
+                    <span>|</span>
+                    <span>مدير العيادات: <strong class="text-slate-900">3670</strong></span>
+                    <span>|</span>
+                    <span>Code Blue: <strong class="text-slate-900">3444</strong></span>
+                    <span>|</span>
+                    <span>السويتش: <strong class="text-slate-900">9</strong></span>
+                </div>
+            </div>
+
+        </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyC601QI-mcLycmkI7QvqEJo4-tF42W-jdk",
+            authDomain: "mab-cap-hospital-oncall.firebaseapp.com",
+            projectId: "mab-cap-hospital-oncall",
+            storageBucket: "mab-cap-hospital-oncall.firebasestorage.app",
+            messagingSenderId: "77838801510",
+            appId: "1:77838801510:web:25fca0c10f628cb239eba7",
+            measurementId: "G-N49WJPKPHL"
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        const { createApp, ref, computed, onMounted } = Vue;
+
+        createApp({
+            setup() {
+
+                function getWorkDayId() {
+                    const now = new Date();
+                    const adjustedDate = new Date(now.getTime() - (8 * 60 * 60 * 1000));
+                    return (adjustedDate.getDay() + 1) % 7;
+                }
+
+                const daysOfWeek = [
+                    { id: 0, name: 'السبت' },
+                    { id: 1, name: 'الأحد' },
+                    { id: 2, name: 'الإثنين' },
+                    { id: 3, name: 'الثلاثاء' },
+                    { id: 4, name: 'الأربعاء' },
+                    { id: 5, name: 'الخميس' },
+                    { id: 6, name: 'الجمعة' }
+                ];
+
+                const currentDayId = getWorkDayId();
+                const selectedDayId = ref(currentDayId);
+
+                const currentUser = ref(null);
+                const showLoginModal = ref(false);
+                const loginEmail = ref('');
+                const loginPassword = ref('');
+                const loginError = ref('');
+                const isLoggingIn = ref(false);
+
+                const isAdminMode = computed(() => !!currentUser.value);
+
+                const isFirebaseConnected = ref(false);
+                const specialties = ref([]);
+                const doctors = ref([]);
+                const searchQuery = ref('');
+                const selectedSpecialty = ref(null);
+                const statusFilter = ref('oncall');
+                const isLoading = ref(true);
+                const isUpdatingAvatars = ref(false);
+
+                const showAdminModal = ref(false);
+                const adminTab = ref('manage');
+                const editingDoctorId = ref(null);
+
+                const doctorForm = ref({
+                    name: '',
+                    specialty: '',
+                    title: '',
+                    phone: '',
+                    shiftHours: '08:00 AM - 07:59 AM',
+                    location: '',
+                    days: [currentDayId],
+                    dayRanks: { [currentDayId]: 1 }
+                });
+
+                const newSpecialtyName = ref('');
+                const newSpecialtyOrder = ref(1);
+                const toast = ref({ show: false, message: '', type: 'success' });
+
+                const confirmModal = ref({
+                    show: false,
+                    title: '',
+                    message: '',
+                    action: null
+                });
+
+                const loginAdmin = async () => {
+                    loginError.value = '';
+                    isLoggingIn.value = true;
+                    try {
+                        await auth.signInWithEmailAndPassword(loginEmail.value, loginPassword.value);
+                        showLoginModal.value = false;
+                        loginEmail.value = '';
+                        loginPassword.value = '';
+                        showToast('تم تسجيل دخول الإدارة بنجاح!');
+                        showAdminModal.value = true;
+                    } catch (err) {
+                        console.error('Firebase Auth Login Error:', err);
+                        if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+                            loginError.value = 'بيانات الدخول غير صحيحة. يرجى التأكد من البريد وكلمة المرور المسجلة بقاعدة البيانات.';
+                        } else if (err.code === 'auth/invalid-email') {
+                            loginError.value = 'صيغة البريد الإلكتروني غير صحيحة.';
+                        } else {
+                            loginError.value = err.message || 'حدث خطأ أثناء الاتصال بقاعدة البيانات.';
+                        }
+                    } finally {
+                        isLoggingIn.value = false;
+                    }
+                };
+
+                const logoutAdmin = async () => {
+                    try {
+                        await auth.signOut();
+                        showAdminModal.value = false;
+                        showToast('تم تسجيل خروج الإدارة بنجاح.');
+                    } catch (err) {
+                        console.error('Sign out error:', err);
+                    }
+                };
+
+                const sortedSpecialties = computed(() => {
+                    return [...specialties.value].sort((a, b) => {
+                        const orderA = typeof a.order === 'number' ? a.order : 999;
+                        const orderB = typeof b.order === 'number' ? b.order : 999;
+                        return orderA - orderB;
+                    });
+                });
+
+                const getDayName = (dayId) => {
+                    return daysOfWeek.find(d => d.id === dayId)?.name || '';
+                };
+
+                const isDoctorOnCallOnDay = (doctor, dayId) => {
+                    return Array.isArray(doctor.days) && doctor.days.includes(dayId);
+                };
+
+                const getDoctorRankForDay = (doctor, dayId) => {
+                    if (!doctor || !doctor.dayRanks) return 1;
+                    const rank = doctor.dayRanks[dayId];
+                    return (rank !== undefined && rank !== null && rank !== '') ? Number(rank) : 1;
+                };
+
+                const todaysOnCallCount = computed(() => {
+                    return doctors.value.filter(d => isDoctorOnCallOnDay(d, currentDayId)).length;
+                });
+
+                const filteredDoctors = computed(() => {
+                    return doctors.value.filter(doctor => {
+                        const query = searchQuery.value.trim().toLowerCase();
+                        const matchesSearch = !query || 
+                            doctor.name?.toLowerCase().includes(query) ||
+                            doctor.specialty?.toLowerCase().includes(query) ||
+                            doctor.title?.toLowerCase().includes(query) ||
+                            doctor.phone?.includes(query);
+
+                        const matchesSpecialty = !selectedSpecialty.value || doctor.specialty === selectedSpecialty.value;
+                        const matchesStatus = statusFilter.value === 'all' || isDoctorOnCallOnDay(doctor, selectedDayId.value);
+
+                        return matchesSearch && matchesSpecialty && matchesStatus;
+                    }).sort((a, b) => {
+                        const aOnCall = isDoctorOnCallOnDay(a, selectedDayId.value) ? 1 : 0;
+                        const bOnCall = isDoctorOnCallOnDay(b, selectedDayId.value) ? 1 : 0;
+
+                        if (aOnCall !== bOnCall) {
+                            return bOnCall - aOnCall;
+                        }
+
+                        if (aOnCall && bOnCall) {
+                            const rankA = getDoctorRankForDay(a, selectedDayId.value);
+                            const rankB = getDoctorRankForDay(b, selectedDayId.value);
+                            if (rankA !== rankB) {
+                                return rankA - rankB;
+                            }
+                        }
+
+                        return (a.name || '').localeCompare(b.name || '', 'ar');
+                    });
+                });
+
+                const updateAllDoctorAvatars = async () => {
+                    if (!isAdminMode.value) return;
+                    if (doctors.value.length === 0) {
+                        showToast('لا يوجد أطباء مسجلون حالياً لتحديث صورهم.', 'error');
+                        return;
+                    }
+
+                    isUpdatingAvatars.value = true;
+                    try {
+                        const batch = db.batch();
+                        doctors.value.forEach(doc => {
+                            const docRef = db.collection('doctors').doc(doc.id);
+                            const avatarUrl = `https://placehold.co/150x150/0f766e/ffffff?text=Doctor`;
+                            batch.update(docRef, { avatar: avatarUrl });
+                        });
+
+                        await batch.commit();
+                        showToast(`تم تحديث صور جميع الأطباء (${doctors.value.length}) بنجاح!`);
+                    } catch (err) {
+                        console.error('Batch avatar update error:', err);
+                        showToast('حدث خطأ أثناء تحديث صور الأطباء في قاعدة البيانات', 'error');
+                    } finally {
+                        isUpdatingAvatars.value = false;
+                    }
+                };
+
+                const getOnCallCountForDay = (dayId) => {
+                    return doctors.value.filter(d => isDoctorOnCallOnDay(d, dayId)).length;
+                };
+
+                const getOnCallCountForSpecialtyAndDay = (specName, dayId) => {
+                    return doctors.value.filter(d => d.specialty === specName && isDoctorOnCallOnDay(d, dayId)).length;
+                };
+
+                const getDoctorTotalForSpecialty = (specName) => {
+                    return doctors.value.filter(d => d.specialty === specName).length;
+                };
+
+                const getDoctorDaysFormatted = (doc) => {
+                    if (!doc.days || !doc.days.length) return 'لا يوجد';
+                    const sorted = [...doc.days].sort((a, b) => a - b);
+                    return sorted.map(dId => {
+                        const dayName = daysOfWeek.find(d => d.id === dId)?.name;
+                        const rank = getDoctorRankForDay(doc, dId);
+                        return `${dayName} (#${rank})`;
+                    }).filter(Boolean).join('، ');
+                };
+
+                const handleDayToggle = (dayId) => {
+                    if (doctorForm.value.days.includes(dayId)) {
+                        if (!doctorForm.value.dayRanks[dayId]) {
+                            doctorForm.value.dayRanks[dayId] = 1;
+                        }
+                    }
+                };
+
+                const showToast = (msg, type = 'success') => {
+                    toast.value = { show: true, message: msg, type };
+                    setTimeout(() => {
+                        toast.value.show = false;
+                    }, 3000);
+                };
+
+                const resetFilters = () => {
+                    searchQuery.value = '';
+                    selectedSpecialty.value = null;
+                    statusFilter.value = 'all';
+                };
+
+                const copyPhone = (phone) => {
+                    const tempInput = document.createElement('input');
+                    tempInput.value = phone;
+                    document.body.appendChild(tempInput);
+                    tempInput.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(tempInput);
+                    showToast(`تم نسخ الرقم (${phone}) بنجاح`);
+                };
+
+                const openAdminModal = () => {
+                    if (!isAdminMode.value) {
+                        showLoginModal.value = true;
+                    } else {
+                        showAdminModal.value = true;
+                    }
+                };
+
+                const resetDoctorForm = () => {
+                    editingDoctorId.value = null;
+                    doctorForm.value = {
+                        name: '',
+                        specialty: specialties.value[0]?.name || '',
+                        title: '',
+                        phone: '',
+                        shiftHours: '08:00 AM - 07:59 AM',
+                        location: '',
+                        days: [selectedDayId.value],
+                        dayRanks: { [selectedDayId.value]: 1 }
+                    };
+                };
+
+                const editDoctor = (doc) => {
+                    if (!isAdminMode.value) {
+                        showLoginModal.value = true;
+                        return;
+                    }
+                    editingDoctorId.value = doc.id;
+                    const existingRanks = doc.dayRanks ? { ...doc.dayRanks } : {};
+                    
+                    if (Array.isArray(doc.days)) {
+                        doc.days.forEach(dId => {
+                            if (existingRanks[dId] === undefined) {
+                                existingRanks[dId] = 1;
+                            }
+                        });
+                    }
+
+                    doctorForm.value = {
+                        ...doc,
+                        days: doc.days ? [...doc.days] : [],
+                        dayRanks: existingRanks
+                    };
+                    adminTab.value = 'add';
+                    showAdminModal.value = true;
+                };
+
+                const saveDoctorToFirebase = async () => {
+                    if (!isAdminMode.value) return;
+                    try {
+                        const cleanDayRanks = {};
+                        doctorForm.value.days.forEach(dId => {
+                            cleanDayRanks[dId] = Number(doctorForm.value.dayRanks[dId]) || 1;
+                        });
+
+                        const payload = {
+                            name: doctorForm.value.name,
+                            specialty: doctorForm.value.specialty,
+                            title: doctorForm.value.title,
+                            phone: doctorForm.value.phone,
+                            shiftHours: doctorForm.value.shiftHours,
+                            location: doctorForm.value.location,
+                            days: doctorForm.value.days,
+                            dayRanks: cleanDayRanks
+                        };
+
+                        if (editingDoctorId.value) {
+                            await db.collection('doctors').doc(editingDoctorId.value).update(payload);
+                            showToast('تم تحديث بيانات الطبيب وترتيبه بنجاح');
+                        } else {
+                            await db.collection('doctors').add({
+                                ...payload,
+                                avatar: `https://placehold.co/150x150/0f766e/ffffff?text=Doctor`
+                            });
+                            showToast('تمت إضافة الطبيب الجديد بنجاح');
+                        }
+                        resetDoctorForm();
+                        adminTab.value = 'manage';
+                    } catch (err) {
+                        console.error('Firebase save error:', err);
+                        showToast('حدث خطأ أو عدم امتلاك صلاحيات للتعديل بقاعدة البيانات', 'error');
+                    }
+                };
+
+                const confirmDeleteDoctor = (doc) => {
+                    if (!isAdminMode.value) return;
+                    confirmModal.value = {
+                        show: true,
+                        title: 'حذف بيانات الطبيب',
+                        message: `هل أنت تأكد من حذف الطبيب (${doc.name}) نهائياً من قاعدة البيانات؟`,
+                        action: () => deleteDoctor(doc.id)
+                    };
+                };
+
+                const deleteDoctor = async (docId) => {
+                    if (!isAdminMode.value) return;
+                    try {
+                        await db.collection('doctors').doc(docId).delete();
+                        showToast('تم حذف الطبيب من قاعدة البيانات');
+                    } catch (err) {
+                        console.error('Firebase delete error:', err);
+                        showToast('حدث خطأ أثناء عملية الحذف', 'error');
+                    }
+                };
+
+                const executeConfirmAction = () => {
+                    if (typeof confirmModal.value.action === 'function') {
+                        confirmModal.value.action();
+                    }
+                    confirmModal.value.show = false;
+                };
+
+                const addSpecialtyToFirebase = async () => {
+                    if (!isAdminMode.value || !newSpecialtyName.value.trim()) return;
+                    try {
+                        await db.collection('specialties').add({
+                            name: newSpecialtyName.value.trim(),
+                            order: Number(newSpecialtyOrder.value) || (specialties.value.length + 1),
+                            icon: 'fa-solid fa-stethoscope'
+                        });
+                        newSpecialtyName.value = '';
+                        newSpecialtyOrder.value = specialties.value.length + 2;
+                        showToast('تمت إضافة التخصص بنجاح');
+                    } catch (err) {
+                        console.error(err);
+                        showToast('فشل إضافة التخصص', 'error');
+                    }
+                };
+
+                const updateSpecialtyOrder = async (specId, newOrder) => {
+                    if (!isAdminMode.value) return;
+                    try {
+                        await db.collection('specialties').doc(specId).update({
+                            order: Number(newOrder)
+                        });
+                        showToast('تم تحديث ترتيب التخصص');
+                    } catch (err) {
+                        console.error(err);
+                        showToast('فشل تحديث الترتيب', 'error');
+                    }
+                };
+
+                const confirmSeedInitialData = () => {
+                    if (!isAdminMode.value) return;
+                    confirmModal.value = {
+                        show: true,
+                        title: 'إعادة زرع البيانات المبدئية',
+                        message: 'سيتم إضافة مجموعة من البيانات الافتراضية التجريبية بتنسيق الترتيب اليومي لقاعدة البيانات، هل ترغب بالتأكيد؟',
+                        action: seedInitialData
+                    };
+                };
+
+                const seedInitialData = async () => {
+                    if (!isAdminMode.value) return;
+                    try {
+                        isLoading.value = true;
+
+                        const initialSpecialties = [
+                            { name: 'الطوارئ والحوادث', order: 1, icon: 'fa-solid fa-truck-medical' },
+                            { name: 'الباطنية العامة', order: 2, icon: 'fa-solid fa-stethoscope' },
+                            { name: 'أمراض القلب', order: 3, icon: 'fa-solid fa-heart-pulse' },
+                            { name: 'جراحة العظام', order: 4, icon: 'fa-solid fa-bone' },
+                            { name: 'الأطفال وحديثي الولادة', order: 5, icon: 'fa-solid fa-baby' },
+                            { name: 'النساء والتوليد', order: 6, icon: 'fa-solid fa-person-pregnant' },
+                            { name: 'العناية المركزة', order: 7, icon: 'fa-solid fa-bed-pulse' }
+                        ];
+
+                        for (const spec of initialSpecialties) {
+                            await db.collection('specialties').add(spec);
+                        }
+
+                        const initialDoctors = [
+                            {
+                                name: 'د. أحمد المنصوري',
+                                specialty: 'الطوارئ والحوادث',
+                                title: 'استشاري طوارئ وحوادث',
+                                phone: '01234567890',
+                                shiftHours: '08:00 AM - 07:59 AM',
+                                location: 'قسم الطوارئ - الدور الأرضي',
+                                days: [0, 1, 2, 3, 4, 5, 6],
+                                dayRanks: { 0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 2, 6: 1 },
+                                avatar: 'https://placehold.co/150x150/0f766e/ffffff?text=Doctor'
+                            },
+                            {
+                                name: 'د. سارة العتيبي',
+                                specialty: 'الطوارئ والحوادث',
+                                title: 'أخصائية طوارئ وعناية',
+                                phone: '01234567890',
+                                shiftHours: '08:00 AM - 07:59 AM',
+                                location: 'قسم الطوارئ - الدور الأرضي',
+                                days: [0, 5, 6],
+                                dayRanks: { 0: 2, 5: 1, 6: 2 },
+                                avatar: 'https://placehold.co/150x150/0f766e/ffffff?text=Doctor'
+                            },
+                            {
+                                name: 'د. خالد الغامدي',
+                                specialty: 'جراحة العظام',
+                                title: 'استشاري جراحة العظام والمفاصل',
+                                phone: '01234567890',
+                                shiftHours: '08:00 AM - 07:59 AM',
+                                location: 'عيادات العظام - العيادات الخارجية',
+                                days: [1, 3, 5],
+                                dayRanks: { 1: 1, 3: 1, 5: 3 },
+                                avatar: 'https://placehold.co/150x150/0f766e/ffffff?text=Doctor'
+                            },
+                            {
+                                name: 'د. فاطمة الزهراني',
+                                specialty: 'الأطفال وحديثي الولادة',
+                                title: 'استشاري طب الأطفال',
+                                phone: '01234567890',
+                                shiftHours: '08:00 AM - 07:59 AM',
+                                location: 'جناح الأطفال - الدور الثاني',
+                                days: [0, 1, 3, 6],
+                                dayRanks: { 0: 1, 1: 2, 3: 1, 6: 1 },
+                                avatar: 'https://placehold.co/150x150/0f766e/ffffff?text=Doctor'
+                            },
+                            {
+                                name: 'د. عمر الشمري',
+                                specialty: 'أمراض القلب',
+                                title: 'أخصائي أمراض قلب وقسطرة',
+                                phone: '01234567890',
+                                shiftHours: '08:00 AM - 07:59 AM',
+                                location: 'مركز القلب - البرج B',
+                                days: [2, 4, 5, 6],
+                                dayRanks: { 2: 1, 4: 1, 5: 1, 6: 2 },
+                                avatar: 'https://placehold.co/150x150/0f766e/ffffff?text=Doctor'
+                            },
+                            {
+                                name: 'د. مريم الحارثي',
+                                specialty: 'النساء والتوليد',
+                                title: 'استشاري أمراض النساء والتوليد',
+                                phone: '01234567890',
+                                shiftHours: '08:00 AM - 07:59 AM',
+                                location: 'مستشفى الولادة - الدور الأول',
+                                days: [0, 3, 5],
+                                dayRanks: { 0: 3, 3: 2, 5: 1 },
+                                avatar: 'https://placehold.co/150x150/0f766e/ffffff?text=Doctor'
+                            }
+                        ];
+
+                        for (const doc of initialDoctors) {
+                            await db.collection('doctors').add(doc);
+                        }
+
+                        showToast('تم زرع البيانات التجريبية بنجاح!');
+                    } catch (err) {
+                        console.error('Seed error:', err);
+                        showToast('حدث خطأ أثناء زرع البيانات.', 'error');
+                    } finally {
+                        isLoading.value = false;
+                    }
+                };
+
+                const printSchedule = () => {
+                    window.print();
+                };
+
+                const selectSpecialty = (specName) => {
+                    selectedSpecialty.value = specName;
+                    const element = document.getElementById('doctors-section');
+                    if (element) {
+                        element.scrollIntoView({ behavior: 'smooth' });
+                    }
+                };
+
+                const exportCSV = () => {
+                    let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+                    csvContent += "ترتيب اليوم,اسم الطبيب,التخصص,المسمى الوظيفي,رقم الموبايل,الشيفت,الموقع\n";
+                    filteredDoctors.value.forEach(doc => {
+                        const rank = isDoctorOnCallOnDay(doc, selectedDayId.value) ? `#${getDoctorRankForDay(doc, selectedDayId.value)}` : '-';
+                        csvContent += `"${rank}","${doc.name}","${doc.specialty}","${doc.title}","${doc.phone}","${doc.shiftHours}","${doc.location || ''}"\n`;
+                    });
+                    const encodedUri = encodeURI(csvContent);
+                    const link = document.createElement("a");
+                    link.setAttribute("href", encodedUri);
+                    link.setAttribute("download", `hospital_oncall_schedule_${getDayName(selectedDayId.value)}_${new Date().toISOString().slice(0,10)}.csv`);
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    showToast('تم تصدير الجدول بصيغة CSV بنجاح');
+                };
+
+                onMounted(() => {
+                    auth.onAuthStateChanged((user) => {
+                        currentUser.value = user;
+                    });
+
+                    db.collection('specialties').onSnapshot((snapshot) => {
+                        const items = [];
+                        snapshot.forEach(doc => {
+                            items.push({ id: doc.id, ...doc.data() });
+                        });
+                        specialties.value = items;
+                        isFirebaseConnected.value = true;
+                        isLoading.value = false;
+                    }, (err) => {
+                        console.error('Specialties sync error:', err);
+                        isLoading.value = false;
+                    });
+
+                    db.collection('doctors').onSnapshot((snapshot) => {
+                        const items = [];
+                        snapshot.forEach(doc => {
+                            items.push({ id: doc.id, ...doc.data() });
+                        });
+                        doctors.value = items;
+                        isFirebaseConnected.value = true;
+                        isLoading.value = false;
+                    }, (err) => {
+                        console.error('Doctors sync error:', err);
+                        isLoading.value = false;
+                    });
+                });
+
+                return {
+                    daysOfWeek,
+                    currentDayId,
+                    selectedDayId,
+                    currentUser,
+                    showLoginModal,
+                    loginEmail,
+                    loginPassword,
+                    loginError,
+                    isLoggingIn,
+                    isFirebaseConnected,
+                    specialties,
+                    doctors,
+                    searchQuery,
+                    selectedSpecialty,
+                    statusFilter,
+                    isLoading,
+                    isUpdatingAvatars,
+                    isAdminMode,
+                    showAdminModal,
+                    adminTab,
+                    editingDoctorId,
+                    doctorForm,
+                    newSpecialtyName,
+                    newSpecialtyOrder,
+                    sortedSpecialties,
+                    toast,
+                    confirmModal,
+                    todaysOnCallCount,
+                    selectSpecialty,
+                    filteredDoctors,
+                    loginAdmin,
+                    logoutAdmin,
+                    getDayName,
+                    isDoctorOnCallOnDay,
+                    getDoctorRankForDay,
+                    getOnCallCountForDay,
+                    getOnCallCountForSpecialtyAndDay,
+                    getDoctorTotalForSpecialty,
+                    getDoctorDaysFormatted,
+                    handleDayToggle,
+                    resetFilters,
+                    copyPhone,
+                    openAdminModal,
+                    saveDoctorToFirebase,
+                    editDoctor,
+                    confirmDeleteDoctor,
+                    executeConfirmAction,
+                    resetDoctorForm,
+                    addSpecialtyToFirebase,
+                    updateSpecialtyOrder,
+                    updateAllDoctorAvatars,
+                    confirmSeedInitialData,
+                    seedInitialData,
+                    printSchedule,
+                    exportCSV
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
