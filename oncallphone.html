@@ -347,7 +347,7 @@
                     </button>
 
                     <!-- Dynamic Specialties Sorted by 'order' Field -->
-                    <button v-for="spec in sortedSpecialties" 
+                    <button v-for="spec in visibleSpecialties" 
                             :key="spec.id"
                             @click="selectSpecialty(spec.name)"
                             :class="selectedSpecialty === spec.name ? 'bg-medical-700 text-white border-medical-700 shadow-md shadow-teal-700/20' : 'bg-white text-slate-700 border-slate-200 hover:border-teal-300 hover:bg-slate-50'"
@@ -1095,6 +1095,18 @@
                     });
                 });
 
+                // أضف هذه الخاصية داخل setup()
+                const visibleSpecialties = computed(() => {
+                    // إذا كان المستخدم في وضع الإدارة، نُظهر جميع التخصصات بدون إخفاء
+                    if (isAdminMode.value) {
+                        return sortedSpecialties.value;
+                    }
+                    // للمستخدم العادي: نُظهر فقط التخصصات التي تحتوي على طبيب واحد على الأقل مسجل بالنظام
+                    return sortedSpecialties.value.filter(spec => {
+                        return getDoctorTotalForSpecialty(spec.name) > 0;
+                    });
+                });
+
                 const getDayName = (dayId) => {
                     return daysOfWeek.find(d => d.id === dayId)?.name || '';
                 };
@@ -1575,6 +1587,7 @@
                     newSpecialtyName,
                     newSpecialtyOrder,
                     sortedSpecialties,
+                    visibleSpecialties,
                     toast,
                     confirmModal,
                     todaysOnCallCount,
