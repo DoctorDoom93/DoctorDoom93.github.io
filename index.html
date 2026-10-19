@@ -1661,10 +1661,21 @@
 
                 const selectSpecialty = (specName) => {
                     selectedSpecialty.value = specName;
-                    const element = document.getElementById('doctors-section');
-                    if (element) {
-                        element.scrollIntoView({ behavior: 'smooth' });
-                    }
+                    
+                    // استخدام مهلة قصيرة جداً (setTimeout) لضمان أن Vue قام بتحديث وعرض عناصر الأطباء قبل حساب مكانهم
+                    setTimeout(() => {
+                        const element = document.getElementById('doctors-section');
+                        if (element) {
+                            const headerOffset = 140; // مسافة الهيدر العلوي بالأبكسل (يمكن زيادة أو تقليل هذا الرقم حسب الحاجة)
+                            const elementPosition = element.getBoundingClientRect().top;
+                            const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+                
+                            window.scrollTo({
+                                top: offsetPosition,
+                                behavior: 'smooth'
+                            });
+                        }
+                    }, 50);
                 };
 
                 const exportCSV = () => {
