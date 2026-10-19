@@ -67,36 +67,23 @@
     <script src="https://www.gstatic.com/firebasejs/13.0.0/firebase-auth-compat.js"></script>
     
     <style>
+        /* إخفاء شريط التمرير الرئيسي للمتصفح لجميع العناصر وhtml و body */
+        html, body {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+            overflow-y: scroll; /* يسمح بالتمرير البرمجي والبالماوس مع إخفاء الشريط */
+        }
+        
+        html::-webkit-scrollbar, 
+        body::-webkit-scrollbar {
+            display: none;  /* Chrome, Safari and Opera */
+        }
+
         body {
             font-family: 'Tajawal', 'Cairo', sans-serif;
         }
         [v-cloak] { display: none !important; }
         
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f5f9;
-        }
-        .dark ::-webkit-scrollbar-track {
-            background: #0f172a;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 9999px;
-        }
-        .dark ::-webkit-scrollbar-thumb {
-            background: #334155;
-            border-radius: 9999px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
-        .dark ::-webkit-scrollbar-thumb:hover {
-            background: #475569;
-        }
-
         .smooth-image {
             image-rendering: smooth;
             image-rendering: -webkit-optimize-contrast;
@@ -232,6 +219,7 @@
             }
         }
     </style>
+        
 </head>
 <body class="min-h-full flex flex-col text-slate-800 dark:text-slate-100 antialiased selection:bg-teal-500 selection:text-white bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
     
