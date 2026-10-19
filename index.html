@@ -99,6 +99,42 @@
             scrollbar-width: none;  
         }
 
+        /* تخصيص شريط التمرير داخل لوحة التحكم فقط (متوافق مع النمط الفاتح والغامق) */
+        .admin-modal-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 #f1f5f9; /* النمط الفاتح: مقبض رمادي ومسار فاتح */
+        }
+        .dark .admin-modal-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: #475569 #020617; /* النمط الغامق: مقبض رمادي داكن ومسار أسود */
+        }
+
+        .admin-modal-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+        .admin-modal-scroll::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 9999px;
+        }
+        .dark .admin-modal-scroll::-webkit-scrollbar-track {
+            background: #020617;
+            border-radius: 9999px;
+        }
+        .admin-modal-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        .dark .admin-modal-scroll::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 9999px;
+        }
+        .admin-modal-scroll::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        .dark .admin-modal-scroll::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
         /* Material Design 3 Ripples & Smooth State Expressions */
         .md3-state {
             position: relative;
@@ -718,12 +754,12 @@
             </div>
         </div>
 
-        <!-- ADMIN MANAGEMENT MODAL (MD3 Large Dialog Surface) -->
+        <!-- ADMIN MANAGEMENT MODAL (MD3 Large Dialog Surface) - تمت إضافة الكلاس admin-modal-scroll -->
         <div v-if="showAdminModal && isAdminMode" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 no-print">
             <div class="bg-white dark:bg-slate-900 rounded-5xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800">
                 
                 <!-- Modal Header -->
-                <div class="px-6 py-4 bg-slate-900 dark:bg-slate-950 text-white flex items-center justify-between border-b dark:border-slate-800">
+                <div class="px-6 py-4 bg-slate-900 dark:bg-slate-950 text-white flex items-center justify-between border-b dark:border-slate-800 shrink-0">
                     <div class="flex items-center gap-3">
                         <i class="fa-solid fa-user-gear text-amber-400 text-xl"></i>
                         <div>
@@ -737,7 +773,7 @@
                 </div>
 
                 <!-- Modal Tabs (MD3 Secondary Navigation Tabs) -->
-                <div class="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-6 pt-3 gap-2 text-xs font-bold">
+                <div class="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-6 pt-3 gap-2 text-xs font-bold shrink-0">
                     <button @click="adminTab = 'manage'" 
                             :class="adminTab === 'manage' ? 'bg-white dark:bg-slate-900 text-medical-700 dark:text-teal-400 border-t-2 border-medical-600 dark:border-teal-500 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'"
                             class="md3-state px-4 py-2.5 rounded-t-2xl transition">
@@ -755,8 +791,8 @@
                     </button>
                 </div>
 
-                <!-- Modal Body Content -->
-                <div class="p-6 overflow-y-auto flex-1 bg-slate-50 dark:bg-slate-950">
+                <!-- Modal Body Content - تمت إضافة كلاس admin-modal-scroll هنا -->
+                <div class="p-6 overflow-y-auto flex-1 bg-slate-50 dark:bg-slate-950 admin-modal-scroll">
                     
                     <!-- TAB 1: MANAGE DOCTORS LIST -->
                     <div v-if="adminTab === 'manage'" class="space-y-3">
@@ -937,7 +973,7 @@
                 </div>
 
                 <!-- Modal Footer -->
-                <div class="px-6 py-3.5 bg-slate-100 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+                <div class="px-6 py-3.5 bg-slate-100 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs shrink-0">
                     <button @click="confirmSeedInitialData" class="text-amber-700 dark:text-amber-400 hover:underline font-bold flex items-center gap-1">
                         <i class="fa-solid fa-arrows-rotate"></i> إعادة زرع البيانات المبدئية الافتراضية
                     </button>
@@ -1673,6 +1709,7 @@
                         });
                         doctors.value = items;
                         isFirebaseConnected.value = true;
+                        isLoading.value,
                         isLoading.value = false;
                     }, (err) => {
                         console.error('Doctors sync error:', err);
